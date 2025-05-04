@@ -47,7 +47,7 @@ const RootLayout = ({children}) => {
                     </Pressable>
                 </Link>
 
-                <Link href="/contact" asChild>
+                <Link href="/userList" asChild>
                     <TouchableOpacity style={styles.footerButton}>
                         <Image
                             source={pathname === "/contact" ? contactActiveIcon : contactIcon}

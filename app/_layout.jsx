@@ -8,21 +8,31 @@ import {UserProvider} from "../contexts/UserContext";
 import { ClerkProvider } from '@clerk/clerk-expo'
 import { PetProvider } from '../contexts/PetContext';
 
+import useClerkFirebaseSync from '../hooks/useClerkFirebaseSync';
+
 const RootLayout = () => {
     const colorScheme = useColorScheme()
     const theme = Colors[colorScheme] ?? Colors.light
     const pathname = usePathname();
-
     return (
         <ClerkProvider>
-            <PetProvider>
-            <ThemedView style={{flex: 1}}>
-                <Slot />
-            </ThemedView>
-            </PetProvider>
+            <ClerkWrappedApp/>
         </ClerkProvider>
-    )
+    );
 }
+
+    const ClerkWrappedApp = () => {
+        useClerkFirebaseSync();
+
+
+        return (
+                <PetProvider>
+                <ThemedView style={{flex: 1}}>
+                    <Slot />
+                </ThemedView>
+                </PetProvider>
+        )
+    }
 
 export default RootLayout
 // <Stack screenOptions={{
