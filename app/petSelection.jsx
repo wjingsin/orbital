@@ -1,335 +1,442 @@
-// app/petSelection.js (update with navigation links)
+// app/pet-selection.js
+
 import React, { useState, useEffect } from 'react';
 import {
-    View,
     Text,
-    StyleSheet,
+    TextInput,
     TouchableOpacity,
-    ScrollView,
+    View,
+    StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
     Image,
+    SafeAreaView,
+    ScrollView,
     ActivityIndicator,
     Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth, useUser } from '@clerk/clerk-expo';
+import { usePetData, PET_TYPES } from '../contexts/PetContext';
+import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 
-// Import Firebase services with the correct path
-import { subscribeToPendingInvitations, updateUserStatus, getActiveSession } from '/Users/aussure/Documents/orbital/orbital/firebaseService';
-import useClerkFirebaseSync from '../hooks/useClerkFirebaseSync';
+// Pet images
+const PET_IMAGES = {
+    corgi: require('../assets/corgi1.png'),
+    pomeranian: require('../assets/pom1.png'),
+    pug: require('../assets/pug1.png'),
+};
 
-// Your existing pet data array
-const pets = [
-    {
-        id: 1,
-        name: 'Fluffy',
-        type: 'Cat',
-        image: require('../assets/corgi1.png'),
-    },
-    {
-        id: 2,
-        name: 'Buddy',
-        type: 'Dog',
-        image: require('../assets/corgi1.png'),
-    },
-    // Add more pets as needed
-];
+// Pet names for display
+const PET_NAMES = {
+    corgi: 'Corgi',
+    pomeranian: 'Pomeranian',
+    pug: 'Pug',
+};
 
 export default function PetSelectionScreen() {
-    const { signOut } = useAuth();
-    const { user } = useUser();
     const router = useRouter();
+    const { petData, setPetData, isLoading } = usePetData();
+    const { isLoaded, isSignedIn, user } = useUser();
 
-    const [pendingInvitations, setPendingInvitations] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [signingOut, setSigningOut] = useState(false);
+    // Profile state
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [profileError, setProfileError] = useState('');
 
-    // Use the hook to ensure user data is synced with Firebase
-    useClerkFirebaseSync();
+    // Pet selection state
+    const [selectedIndex, setSelectedIndex] = useState(petData.selectedPet);
+    const [petName, setPetName] = useState(petData.petName || '');
+    const [petError, setPetError] = useState('');
 
+    // Loading state
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Update local state if petData changes
     useEffect(() => {
-        let unsubscribePendingInvitations;
-        let isActive = true;
+        if (!isLoading) {
+            setSelectedIndex(petData.selectedPet);
+            setPetName(petData.petName || '');
+        }
+    }, [isLoading, petData]);
 
-        const initializeUser = async () => {
-            if (!user) return;
+    // Get user data when loaded
+    useEffect(() => {
+        if (isLoaded && isSignedIn && user) {
+            setFirstName(user.firstName || '');
+            setLastName(user.lastName || '');
+        }
+    }, [isLoaded, isSignedIn, user]);
 
-            try {
-                // Set user as online
-                await updateUserStatus(user.id, 'online');
+    const handlePetSelection = (index) => {
+        setSelectedIndex(index);
+        setPetError('');
+    };
 
-                // Check if user has an active session
-                const activeSession = await getActiveSession(user.id);
-                if (activeSession) {
-                    // Redirect to the active session
-                    Alert.alert(
-                        'Active Session Found',
-                        'You have an active session. Would you like to return to it?',
-                        [
-                            { text: 'No', style: 'cancel' },
-                            {
-                                text: 'Yes',
-                                onPress: () => router.push({ pathname: '/session', params: { sessionId: activeSession.id } })
-                            }
-                        ]
-                    );
-                }
+    const handleContinue = async () => {
+        let hasError = false;
 
-                // Subscribe to pending invitations
-                unsubscribePendingInvitations = subscribeToPendingInvitations(user.id, (invitations) => {
-                    if (isActive) {
-                        setPendingInvitations(invitations.length);
-                    }
-                });
+        // Validate profile information
+        if (!firstName.trim()) {
+            setProfileError('First name cannot be blank');
+            hasError = true;
+        } else if (!lastName.trim()) {
+            setProfileError('Last name cannot be blank');
+            hasError = true;
+        } else {
+            setProfileError('');
+        }
 
-                if (isActive) {
-                    setLoading(false);
-                }
-            } catch (error) {
-                console.error('Error initializing user:', error);
-                if (isActive) {
-                    // Set loading to false even on error to prevent infinite loading state
-                    setLoading(false);
-                    // Show error message to user
-                    Alert.alert('Error', 'Failed to load user data. Please try again later.');
-                }
-            }
-        };
+        // Validate pet selection
+        if (selectedIndex === null) {
+            setPetError('Please select a pet');
+            hasError = true;
+        } else if (!petName.trim()) {
+            setPetError('Please name your pet');
+            hasError = true;
+        } else {
+            setPetError('');
+        }
 
-        initializeUser();
+        if (hasError) return;
 
-        // Set user as offline when component unmounts
-        return () => {
-            isActive = false;
-            if (unsubscribePendingInvitations) {
-                unsubscribePendingInvitations();
-            }
-        };
-    }, [user]);
+        // Everything is valid, proceed with saving
+        setIsSaving(true);
 
-    const handleSignOut = async () => {
-        if (signingOut) return;
-
-        setSigningOut(true);
         try {
-            if (user) {
-                // Set user status to offline before signing out
-                await updateUserStatus(user.id, 'offline');
+            // First update user profile if signed in
+            if (isSignedIn && user) {
+                await user.update({
+                    firstName: firstName.trim(),
+                    lastName: lastName.trim(),
+                });
             }
-            await signOut();
-            router.replace('/');
+
+            // Then save pet selection
+            await setPetData({
+                selectedPet: selectedIndex,
+                petName: petName.trim(),
+                isConfirmed: true,
+            });
+
+            // Navigate to the next screen
+            router.replace('/home'); // Replace with your desired route
         } catch (error) {
-            console.error('Error signing out:', error);
-            Alert.alert('Error', 'Failed to sign out. Please try again.');
-            setSigningOut(false);
+            console.error('Error saving data:', error);
+            Alert.alert('Error', 'Failed to save your information. Please try again.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    // Add a debug button to help troubleshoot
-    const forceExit = () => {
-        setLoading(false);
-    };
-
-    if (loading) {
+    // Loading state for both pet data and user auth
+    if (isLoading || !isLoaded) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#eb7d42" />
-                <Text style={styles.loadingText}>Loading...</Text>
-                <TouchableOpacity style={styles.debugButton} onPress={forceExit}>
-                    <Text style={styles.debugButtonText}>Debug: Force Exit Loading</Text>
-                </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerText}>Select a Pet</Text>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/invitations')}>
-                    <Ionicons name="mail" size={24} color="#fff" />
-                    {pendingInvitations > 0 && (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{pendingInvitations}</Text>
+        <SafeAreaView style={styles.safeArea}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.container}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <View style={styles.formContainer}>
+                        <Text style={styles.header}>Setup Your Profile</Text>
+                        <Text style={styles.subHeader}>
+                            Tell us about yourself and choose your pet companion
+                        </Text>
+
+                        {/* User Profile Section */}
+                        <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>
+                                <Ionicons name="person" size={20} color="#eb7d42" /> Your Information
+                            </Text>
+
+                            {profileError ? (
+                                <Text style={styles.errorText}>{profileError}</Text>
+                            ) : null}
+
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>First Name <Text style={styles.requiredStar}>*</Text></Text>
+                                <TextInput
+                                    style={[
+                                        styles.input,
+                                        !firstName.trim() && profileError ? styles.inputError : null
+                                    ]}
+                                    value={firstName}
+                                    onChangeText={(text) => {
+                                        setFirstName(text);
+                                        if (text.trim()) setProfileError('');
+                                    }}
+                                    placeholder="Enter your first name"
+                                    placeholderTextColor="#999"
+                                    autoCapitalize="words"
+                                />
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Last Name <Text style={styles.requiredStar}>*</Text></Text>
+                                <TextInput
+                                    style={[
+                                        styles.input,
+                                        !lastName.trim() && profileError ? styles.inputError : null
+                                    ]}
+                                    value={lastName}
+                                    onChangeText={(text) => {
+                                        setLastName(text);
+                                        if (text.trim()) setProfileError('');
+                                    }}
+                                    placeholder="Enter your last name"
+                                    placeholderTextColor="#999"
+                                    autoCapitalize="words"
+                                />
+                            </View>
                         </View>
-                    )}
-                </TouchableOpacity>
-            </View>
 
-            <ScrollView style={styles.petList} contentContainerStyle={styles.petListContent}>
-                {pets.map((pet) => (
-                    <TouchableOpacity
-                        key={pet.id}
-                        style={styles.petCard}
-                        onPress={() => Alert.alert('Pet Selected', `You selected ${pet.name}!`)}
-                    >
-                        <Image source={pet.image} style={styles.petImage} />
-                        <View style={styles.petInfo}>
-                            <Text style={styles.petName}>{pet.name}</Text>
-                            <Text style={styles.petType}>{pet.type}</Text>
+                        {/* Pet Selection Section */}
+                        <View style={styles.sectionContainer}>
+                            <Text style={styles.sectionTitle}>
+                                <Ionicons name="paw" size={20} color="#eb7d42" /> Choose Your Pet
+                            </Text>
+
+                            {petError ? <Text style={styles.errorText}>{petError}</Text> : null}
+
+                            <View style={styles.petsContainer}>
+                                {PET_TYPES.map((petType, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[
+                                            styles.petOption,
+                                            selectedIndex === index && styles.selectedPet,
+                                        ]}
+                                        onPress={() => handlePetSelection(index)}
+                                    >
+                                        <Image
+                                            source={PET_IMAGES[petType]}
+                                            style={styles.petImage}
+                                            resizeMode="contain"
+                                        />
+                                        <Text style={styles.petLabel}>{PET_NAMES[petType]}</Text>
+                                        <View
+                                            style={[
+                                                styles.checkmark,
+                                                selectedIndex === index && styles.checkmarkVisible,
+                                            ]}
+                                        >
+                                            <Text style={styles.checkmarkText}>✓</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Pet Name <Text style={styles.requiredStar}>*</Text></Text>
+                                <TextInput
+                                    style={[
+                                        styles.input,
+                                        !petName.trim() && petError ? styles.inputError : null
+                                    ]}
+                                    value={petName}
+                                    placeholder="Enter your pet's name"
+                                    placeholderTextColor="#999"
+                                    onChangeText={(text) => {
+                                        setPetName(text);
+                                        if (text.trim()) setPetError('');
+                                    }}
+                                    maxLength={20}
+                                />
+                            </View>
                         </View>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
 
-            <View style={styles.footer}>
-                <TouchableOpacity
-                    style={styles.connectButton}
-                    onPress={() => router.push('/userList')}
-                >
-                    <Ionicons name="people" size={20} color="#fff" style={styles.buttonIcon} />
-                    <Text style={styles.connectButtonText}>Find Pet Owners</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.signOutButton}
-                    onPress={handleSignOut}
-                    disabled={signingOut}
-                >
-                    {signingOut ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                        <>
-                            <Ionicons name="log-out-outline" size={20} color="#fff" style={styles.buttonIcon} />
-                            <Text style={styles.signOutButtonText}>Sign Out</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View>
+                        {/* Submit Button */}
+                        <TouchableOpacity
+                            style={[styles.button, isSaving && styles.disabledButton]}
+                            onPress={handleContinue}
+                            disabled={isSaving}
+                        >
+                            {isSaving ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Continue</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+    },
     container: {
         flex: 1,
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#ffffff',
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#ffffff',
     },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
-    },
-    debugButton: {
-        marginTop: 20,
-        padding: 10,
-        backgroundColor: '#ddd',
-        borderRadius: 5,
-    },
-    debugButtonText: {
-        color: '#333',
-    },
-    header: {
-        backgroundColor: '#eb7d42',
-        paddingTop: 50,
-        paddingBottom: 15,
-        paddingHorizontal: 20,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    iconButton: {
-        position: 'relative',
-        padding: 8,
-    },
-    badge: {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        backgroundColor: '#f44336',
-        borderRadius: 10,
-        width: 20,
-        height: 20,
+    scrollContent: {
+        flexGrow: 1,
         justifyContent: 'center',
-        alignItems: 'center',
+        padding: 20,
     },
-    badgeText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    petList: {
-        flex: 1,
-    },
-    petListContent: {
-        padding: 16,
-    },
-    petCard: {
-        backgroundColor: '#fff',
+    formContainer: {
+        width: '100%',
+        maxWidth: 500,
+        alignSelf: 'center',
+        backgroundColor: '#ffffff',
         borderRadius: 12,
-        marginBottom: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
+        padding: 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 2,
+        elevation: 3,
     },
-    petImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        marginRight: 16,
-    },
-    petInfo: {
-        flex: 1,
-    },
-    petName: {
-        fontSize: 18,
+    header: {
+        fontSize: 28,
         fontWeight: 'bold',
+        marginBottom: 8,
+        textAlign: 'center',
         color: '#333',
-        marginBottom: 4,
     },
-    petType: {
-        fontSize: 14,
+    subHeader: {
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 24,
         color: '#666',
     },
-    footer: {
+    sectionContainer: {
+        marginBottom: 24,
+        backgroundColor: '#f8f8f8',
+        borderRadius: 10,
         padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
+        borderLeftWidth: 4,
+        borderLeftColor: '#eb7d42',
     },
-    connectButton: {
-        backgroundColor: '#4CAF50',
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 16,
+        color: '#333',
+        display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        borderRadius: 8,
-        marginBottom: 12,
     },
-    connectButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    signOutButton: {
-        backgroundColor: '#f44336',
+    petsContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        borderRadius: 8,
+        justifyContent: 'space-between',
+        marginBottom: 20,
     },
-    signOutButtonText: {
+    petOption: {
+        width: '30%',
+        aspectRatio: 1,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#ddd',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 8,
+        position: 'relative',
+        backgroundColor: '#fff',
+    },
+    selectedPet: {
+        borderColor: '#eb7d42',
+        backgroundColor: '#fff0e8',
+    },
+    petImage: {
+        width: '75%',
+        height: '75%',
+    },
+    petLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 4,
+        color: '#666',
+        textAlign: 'center',
+    },
+    checkmark: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#eb7d42',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: 0,
+    },
+    checkmarkVisible: {
+        opacity: 1,
+    },
+    checkmarkText: {
         color: '#fff',
+        fontWeight: 'bold',
+    },
+    inputContainer: {
+        marginBottom: 16,
+    },
+    label: {
         fontSize: 16,
+        fontWeight: '500',
+        marginBottom: 8,
+        color: '#444',
+    },
+    input: {
+        height: 50,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        backgroundColor: '#fff',
+    },
+    inputError: {
+        borderColor: '#e74c3c',
+        backgroundColor: '#ffeaea',
+    },
+    button: {
+        backgroundColor: '#eb7d42',
+        height: 50,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 18,
         fontWeight: '600',
     },
-    buttonIcon: {
-        marginRight: 8,
+    disabledButton: {
+        opacity: 0.7,
+    },
+    errorText: {
+        color: '#e74c3c',
+        textAlign: 'center',
+        marginBottom: 16,
+        fontWeight: '500',
+    },
+    requiredStar: {
+        color: '#e74c3c',
+        fontWeight: 'bold',
     },
 });

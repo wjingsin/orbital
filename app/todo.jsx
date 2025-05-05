@@ -11,10 +11,24 @@ import {
     Platform,
     Alert
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import { PointsProvider, usePoints } from "../contexts/PointsContext";
+import Spacer from "../components/Spacer";
+import InAppLayout from "../components/InAppLayout";
+import {FontAwesome5} from "@expo/vector-icons";
+
+export default function AppWrapper() {
+    return (
+        <PointsProvider>
+            <App />
+        </PointsProvider>
+    );
+}
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -72,11 +86,12 @@ async function scheduleNotification(task) {
     });
 }
 
-export default function App() {
+function App() {
     const [tasks, setTasks] = useState({});
     const [taskName, setTaskName] = useState('');
     const [date, setDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const { points, addPoint } = usePoints();
 
     // Load tasks from storage when the app starts
     useEffect(() => {
@@ -137,6 +152,7 @@ export default function App() {
             name: taskName,
             dateTime: taskDate.toISOString(),
             completed: false,
+            pointAwarded: false,
         };
 
         setTasks(prevTasks => {
@@ -157,9 +173,23 @@ export default function App() {
 
     const toggleTaskCompletion = (weekday, taskId) => {
         setTasks(prevTasks => {
-            const updatedWeekdayTasks = prevTasks[weekday].map(task =>
-                task.id === taskId ? { ...task, completed: !task.completed } : task
-            );
+            const updatedWeekdayTasks = prevTasks[weekday].map(task => {
+                if (task.id === taskId) {
+                    const isBeingCompleted = !task.completed;
+
+                    // Only add point if completing (not uncompleting) and not already awarded
+                    if (isBeingCompleted && !task.pointAwarded) {
+                        addPoint();
+                    }
+
+                    return {
+                        ...task,
+                        completed: !task.completed,
+                        pointAwarded: task.pointAwarded || !task.completed
+                    };
+                }
+                return task;
+            });
 
             return {
                 ...prevTasks,
@@ -192,9 +222,19 @@ export default function App() {
     };
 
     return (
+        <InAppLayout>
         <GestureHandlerRootView style={{ flex: 1 }}>
+
+            <Spacer height={20}/>
             <View style={styles.container}>
-                <Text style={styles.header}>Weekly To-Do List</Text>
+                <View style={styles.headerContainer}>
+                    <View style={styles.headerLeftSpace} />
+                    <Text style={styles.header}>Tasks</Text>
+                    <View style={[styles.pointsIndicator, {marginTop: -20}]}>
+                        <FontAwesome5 name="bone" size={16} color="#eb7d42" />
+                        <Text style={styles.pointsText}> {points}</Text>
+                    </View>
+                </View>
 
                 {/* Add Task Section */}
                 <View style={styles.addTaskContainer}>
@@ -227,7 +267,7 @@ export default function App() {
                             onChange={onDateChange}
                         />
                     )}
-
+                    <Spacer height={15}/>
                     <TouchableOpacity style={styles.addButton} onPress={addTask}>
                         <Text style={styles.addButtonText}>Add Task</Text>
                     </TouchableOpacity>
@@ -307,10 +347,51 @@ export default function App() {
                 </ScrollView>
             </View>
         </GestureHandlerRootView>
+        </InAppLayout>
     );
 }
 
 const styles = StyleSheet.create({
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    headerLeftSpace: {
+        // This creates an empty space on the left to balance the points indicator
+        width: 60, // Adjust based on your points indicator width
+    },
+    pointsIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        // No need for marginBottom since it's now in the header row
+    },
+    pointsText: {
+        // your existing pointsText styles
+    },
+    pointsIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff5ee',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#ffead9',
+    },
+    pointsContainer: {
+        backgroundColor: '#eb7d42',
+        padding: 10,
+        borderRadius: 20,
+        alignSelf: 'center',
+        marginBottom: 30,
+    },
+    pointsText: {
+        color: '#eb7d42',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
@@ -366,9 +447,6 @@ const styles = StyleSheet.create({
         marginRight: 10,
         backgroundColor: '#e9ecef',
     },
-    selectedWeekday: {
-        backgroundColor: '#4263eb',
-    },
     weekdayButtonText: {
         fontSize: 14,
         color: '#495057',
@@ -392,7 +470,7 @@ const styles = StyleSheet.create({
         color: '#495057',
     },
     addButton: {
-        backgroundColor: '#4263eb',
+        backgroundColor: '#e19a50',
         borderRadius: 6,
         paddingVertical: 12,
         alignItems: 'center',

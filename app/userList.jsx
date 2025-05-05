@@ -11,38 +11,44 @@ import {
     RefreshControl,
     Alert
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import {Link, useRouter} from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
+import {FontAwesome5, Ionicons} from '@expo/vector-icons';
 
 // Import Firebase services
 import {
-    subscribeToPendingInvitations,
     updateUserStatus,
-    getActiveSession,
-    subscribeToOnlineUsers,
-    sendInvitation
+    subscribeToOnlineUsers
 } from '../firebaseService';
 import useClerkFirebaseSync from '../hooks/useClerkFirebaseSync';
 import InAppLayout from "../components/InAppLayout";
+import { usePetData, PET_TYPES } from '../contexts/PetContext';
+import Spacer from "../components/Spacer";
+import Corgi from "../components/corgi_animated";
+import {SignOutButtonSmall} from "../components/SignOutButtonSmall";
+
+// Pet images (same as in pet-selection.js)
+const PET_IMAGES = {
+    corgi: require('../assets/corgi1.png'),
+    pomeranian: require('../assets/pom1.png'),
+    pug: require('../assets/pug1.png'),
+};
 
 export default function UserConnectionScreen() {
     const { signOut } = useAuth();
     const { user } = useUser();
     const router = useRouter();
+    const { petData } = usePetData();
 
-    const [pendingInvitations, setPendingInvitations] = useState(0);
     const [loading, setLoading] = useState(true);
     const [signingOut, setSigningOut] = useState(false);
     const [users, setUsers] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [invitingSent, setInvitingSent] = useState({});
-
+    const [onlineCount, setOnlineCount] = useState(0);
     // Use the hook to ensure user data is synced with Firebase
     useClerkFirebaseSync();
 
     useEffect(() => {
-        let unsubscribePendingInvitations;
         let unsubscribeOnlineUsers;
         let isActive = true;
 
@@ -53,34 +59,13 @@ export default function UserConnectionScreen() {
                 // Set user as online
                 await updateUserStatus(user.id, 'online');
 
-                // Check if user has an active session
-                const activeSession = await getActiveSession(user.id);
-                if (activeSession) {
-                    // Redirect to the active session
-                    Alert.alert(
-                        'Active Session Found',
-                        'You have an active session. Would you like to return to it?',
-                        [
-                            { text: 'No', style: 'cancel' },
-                            {
-                                text: 'Yes',
-                                onPress: () => router.push({ pathname: '/session', params: { sessionId: activeSession.id } })
-                            }
-                        ]
-                    );
-                }
-
-                // Subscribe to pending invitations
-                unsubscribePendingInvitations = subscribeToPendingInvitations(user.id, (invitations) => {
-                    if (isActive) {
-                        setPendingInvitations(invitations.length);
-                    }
-                });
-
                 // Subscribe to online users
                 unsubscribeOnlineUsers = subscribeToOnlineUsers(user.id, (onlineUsers) => {
                     if (isActive) {
-                        setUsers(onlineUsers);
+                        // Filter out current user
+                        const otherUsers = onlineUsers.filter(u => u.userId !== user.id);
+                        setUsers(otherUsers);
+                        setOnlineCount(otherUsers.length);
                     }
                 });
 
@@ -103,9 +88,6 @@ export default function UserConnectionScreen() {
         // Set user as offline when component unmounts
         return () => {
             isActive = false;
-            if (unsubscribePendingInvitations) {
-                unsubscribePendingInvitations();
-            }
             if (unsubscribeOnlineUsers) {
                 unsubscribeOnlineUsers();
             }
@@ -115,24 +97,6 @@ export default function UserConnectionScreen() {
         };
     }, [user]);
 
-    const handleSignOut = async () => {
-        if (signingOut) return;
-
-        setSigningOut(true);
-        try {
-            if (user) {
-                // Set user status to offline before signing out
-                await updateUserStatus(user.id, 'offline');
-            }
-            await signOut();
-            router.replace('/');
-        } catch (error) {
-            console.error('Error signing out:', error);
-            Alert.alert('Error', 'Failed to sign out. Please try again.');
-            setSigningOut(false);
-        }
-    };
-
     const onRefresh = async () => {
         setRefreshing(true);
         // The subscription will update the users list automatically
@@ -141,24 +105,14 @@ export default function UserConnectionScreen() {
         }, 1000);
     };
 
-    const handleSendInvitation = async (toUserId) => {
-        if (!user) return;
-
-        setInvitingSent(prev => ({ ...prev, [toUserId]: true }));
-
-        try {
-            await sendInvitation(
-                user.id,
-                toUserId,
-                `${user.firstName || 'Someone'} wants to connect with you!`,
-                'chat'
-            );
-            // Success notification can be added here
-        } catch (error) {
-            console.error('Error sending invitation:', error);
-            // Error handling can be added here
-        } finally {
-            setInvitingSent(prev => ({ ...prev, [toUserId]: false }));
+    // Function to get the appropriate image based on online count
+    const getCountImage = () => {
+        if (onlineCount === 1) {
+            return require('../assets/pom1.png'); // Replace with your actual one user image
+        } else if (onlineCount === 2) {
+            return require('../assets/pom1.png'); // Replace with your actual two users image
+        } else {
+            return require('../assets/corgi1.png'); // Replace with your actual many users image
         }
     };
 
@@ -166,112 +120,112 @@ export default function UserConnectionScreen() {
     const forceExit = () => {
         setLoading(false);
     };
-
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#eb7d42" />
-                <Text style={styles.loadingText}>Loading...</Text>
-                <TouchableOpacity style={styles.debugButton} onPress={forceExit}>
-                    <Text style={styles.debugButtonText}>Debug: Force Exit Loading</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
+    //
+    // if (loading) {
+    //     return (
+    //         <View style={styles.loadingContainer}>
+    //             <ActivityIndicator size="large" color="#eb7d42" />
+    //             <Text style={styles.loadingText}>Loading...</Text>
+    //             <TouchableOpacity style={styles.debugButton} onPress={forceExit}>
+    //                 <Text style={styles.debugButtonText}>Debug: Force Exit Loading</Text>
+    //             </TouchableOpacity>
+    //         </View>
+    //     );
+    // }
 
     return (
         <View style={styles.container}>
+            <Spacer height={60} />
             <InAppLayout>
-            <View style={styles.header}>
-                <Text style={styles.headerText}>Available Users</Text>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/invitations')}>
-                    <Ionicons name="mail" size={24} color="#fff" />
-                    {pendingInvitations > 0 && (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{pendingInvitations}</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
-            </View>
+                <View style={styles.headerContainer}>
+                    <View style={styles.headerLeftSpace} />
+                    <Text style={styles.headerText}>    Playground</Text>
+                    <SignOutButtonSmall />
+                    <Spacer width={20} />
 
-            {users.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No users are currently online</Text>
-                    <TouchableOpacity
-                        style={styles.refreshButton}
-                        onPress={onRefresh}
-                    >
-                        <Text style={styles.refreshButtonText}>Refresh</Text>
-                    </TouchableOpacity>
                 </View>
-            ) : (
-                <FlatList
-                    data={users}
-                    keyExtractor={(item) => item.userId}
-                    renderItem={({ item }) => (
-                        <View style={styles.userCard}>
-                            <View style={styles.userInfo}>
-                                <Image
-                                    source={{ uri: item.photoUrl || 'https://via.placeholder.com/50' }}
-                                    style={styles.avatar}
-                                />
-                                <View>
-                                    <Text style={styles.userName}>{item.displayName}</Text>
-                                    <View style={styles.statusContainer}>
-                                        <View style={[styles.statusIndicator, { backgroundColor: 'green' }]} />
-                                        <Text style={styles.statusText}>Online</Text>
+                {/*<Image*/}
+                {/*    source={getCountImage()}*/}
+                {/*    style={styles.countImage}*/}
+                {/*    resizeMode="contain"*/}
+                {/*/>*/}
+                <Spacer height={10} />
+                <Corgi />
+                <Spacer height={20} />
+
+                <View style={styles.listContainer}>
+                    <View style={styles.listHeaderContainer}>
+                        <Text style={styles.listHeaderText}>List of users</Text>
+                        <Text style={styles.onlineCount}>{onlineCount} online</Text>
+                    </View>
+
+                    {users.length === 0 ? (
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyText}>No pets are currently online</Text>
+                            {/*<TouchableOpacity*/}
+                            {/*    style={styles.refreshButton}*/}
+                            {/*    onPress={onRefresh}*/}
+                            {/*>*/}
+                            {/*    <Text style={styles.refreshButtonText}>Refresh</Text>*/}
+                            {/*</TouchableOpacity>*/}
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={users}
+                            keyExtractor={(item) => item.userId}
+                            renderItem={({ item }) => (
+                                <View style={styles.userCard}>
+                                    <View style={styles.userInfo}>
+                                        <Image
+                                            source={PET_IMAGES[PET_TYPES[item.petSelection]]}
+                                            style={styles.avatar}
+                                        />
+                                        <View>
+                                            <Text style={styles.petName}>{item.petName}</Text>
+                                            <Text style={styles.userName}>
+                                                Owner: {item.displayName}
+                                            </Text>
+                                            <View style={styles.statusContainer}>
+                                                <View style={[styles.statusIndicator, { backgroundColor: 'green' }]} />
+                                                <Text style={styles.statusText}>Online</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
-                            </View>
-                            <TouchableOpacity
-                                style={[
-                                    styles.inviteButton,
-                                    invitingSent[item.userId] && styles.inviteButtonDisabled
-                                ]}
-                                onPress={() => handleSendInvitation(item.userId)}
-                                disabled={invitingSent[item.userId]}
-                            >
-                                {invitingSent[item.userId] ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                    <Text style={styles.inviteButtonText}>Invite</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            colors={['#eb7d42']}
+                            )}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    colors={['#eb7d42']}
+                                />
+                            }
+                            contentContainerStyle={{ paddingBottom: 20 }}
                         />
-                    }
-                    contentContainerStyle={{ paddingBottom: 80 }} // Add extra padding for the footer buttons
-                />
-            )}
-
-            <View style={styles.footer}>
-                <TouchableOpacity
-                    style={styles.signOutButton}
-                    onPress={handleSignOut}
-                    disabled={signingOut}
-                >
-                    {signingOut ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                        <>
-                            <Ionicons name="log-out-outline" size={20} color="#fff" style={styles.buttonIcon} />
-                            <Text style={styles.signOutButtonText}>Sign Out</Text>
-                        </>
                     )}
-                </TouchableOpacity>
-            </View>
-            < /InAppLayout>
+                </View>
+                <Spacer height={10} />
+            </InAppLayout>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+    secondaryButton: {
+        backgroundColor: 'transparent',
+        padding: 8,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: '#eb7d42',
+        alignItems: 'center',
+        marginRight: 25,
+        },
+
+    secondaryButtonText: {
+        color: '#eb7d42',
+        fontSize: 12,
+        fontWeight: '700',
+        },
     container: {
         flex: 1,
         backgroundColor: '#f8f8f8',
@@ -296,39 +250,62 @@ const styles = StyleSheet.create({
     debugButtonText: {
         color: '#333',
     },
-    header: {
-        backgroundColor: '#eb7d42',
-        paddingTop: 50,
-        paddingBottom: 15,
-        paddingHorizontal: 20,
+    headerContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    headerLeftSpace: {
+        // This creates an empty space on the left to balance the points indicator
+        width: 70, // Adjust based on your points indicator width
+    },
+    headerSpacer: {
+        width: 80,
     },
     headerText: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#fff',
+        color: '#333',
+        flex: 1,
+        textAlign: 'center',
     },
-    iconButton: {
-        position: 'relative',
-        padding: 8,
+    onlineCount: {
+        fontSize: 16,
+        color: '#666',
+        fontWeight: '500',
     },
-    badge: {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        backgroundColor: '#f44336',
+    countImage: {
+        width: '100%',
+        height: 200,
+        marginBottom: 20,
+    },
+    listContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+        marginHorizontal: 16,
         borderRadius: 10,
-        width: 20,
-        height: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        elevation: 3,
+        overflow: 'hidden',
     },
-    badgeText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
+    listHeaderContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#f0f0f0',
+        borderBottomWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    listHeaderText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
     },
     emptyContainer: {
         flex: 1,
@@ -353,31 +330,31 @@ const styles = StyleSheet.create({
     },
     userCard: {
         backgroundColor: '#fff',
-        borderRadius: 10,
         padding: 16,
-        marginHorizontal: 16,
-        marginTop: 16,
+        marginHorizontal: 0,
+        marginTop: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
     },
     userInfo: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         marginRight: 16,
     },
     userName: {
-        fontSize: 16,
+        fontSize: 14,
+        color: '#666',
+    },
+    petName: {
+        fontSize: 18,
         fontWeight: '600',
         color: '#333',
     },
@@ -395,46 +372,5 @@ const styles = StyleSheet.create({
     statusText: {
         fontSize: 14,
         color: '#666',
-    },
-    inviteButton: {
-        backgroundColor: '#eb7d42',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        minWidth: 80,
-        alignItems: 'center',
-    },
-    inviteButtonDisabled: {
-        backgroundColor: '#ccc',
-    },
-    inviteButtonText: {
-        color: '#fff',
-        fontWeight: '600',
-    },
-    footer: {
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#f8f8f8',
-    },
-    signOutButton: {
-        backgroundColor: '#f44336',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        borderRadius: 8,
-    },
-    signOutButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    buttonIcon: {
-        marginRight: 8,
     },
 });

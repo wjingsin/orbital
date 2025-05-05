@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity, StatusBar } from 'react-native'
 import { Link } from 'expo-router'
-import Logo from '../assets/adaptive-icon.png'
+import Logo from '../assets/pug1.png'
 import React from 'react'
 import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
 import { SignOutButton } from '../components/SignOutButton'
@@ -14,47 +14,39 @@ const Index = () => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
+            <Spacer height={70} />
             <View style={styles.logoContainer}>
-                <Image source={Logo} style={styles.logo} />
-                <Text style={styles.appTitle}>Study App</Text>
+                <Image source={Logo} style={[styles.logo, {borderRadius: 20}]} />
+                <Text style={styles.appTitle}>Pawductivity</Text>
             </View>
 
-            <Spacer height={30} />
+            {/*<SignedIn>*/}
+            {/*    <View style={styles.welcomeContainer}>*/}
+            {/*        <Text style={styles.welcomeText}>*/}
+            {/*            Welcome back,*/}
+            {/*        </Text>*/}
+            {/*        <Text style={styles.emailText}>*/}
+            {/*            {user?.emailAddresses[0].emailAddress}*/}
+            {/*        </Text>*/}
+            {/*    </View>*/}
 
-            <SignedIn>
-                <View style={styles.welcomeContainer}>
-                    <Text style={styles.welcomeText}>
-                        Welcome back,
-                    </Text>
-                    <Text style={styles.emailText}>
-                        {user?.emailAddresses[0].emailAddress}
-                    </Text>
-                </View>
+            {/*    <Spacer height={30} />*/}
 
-                <View style={styles.pointsCircle}>
-                    <Text style={styles.pointsValue}>{points}</Text>
-                    <Text style={styles.pointsLabel}>POINTS</Text>
-                </View>
+            {/*    <Link href="/home" asChild>*/}
+            {/*        <TouchableOpacity style={styles.mainButton}>*/}
+            {/*            <Text style={styles.mainButtonText}>Continue to Home</Text>*/}
+            {/*        </TouchableOpacity>*/}
+            {/*    </Link>*/}
 
-                <Spacer height={30} />
+            {/*    <Spacer height={20} />*/}
 
-                <Link href="/home" asChild>
-                    <TouchableOpacity style={styles.mainButton}>
-                        <Text style={styles.mainButtonText}>Continue to Home</Text>
-                    </TouchableOpacity>
-                </Link>
-
-                <Spacer height={20} />
-
-                <SignOutButton />
-            </SignedIn>
+            {/*    <SignOutButton />*/}
+            {/*</SignedIn>*/}
 
             <SignedOut>
                 <View style={styles.heroContainer}>
-                    <Text style={styles.heroTitle}>Master Your Studies</Text>
                     <Text style={styles.heroSubtitle}>
-                        Track progress, earn points, and achieve your academic goals
+                        Achieve goals, nurture pets, connect with friends
                     </Text>
                 </View>
 
@@ -76,7 +68,7 @@ const Index = () => {
             </SignedOut>
 
             <View style={styles.footer}>
-                <Text style={styles.footerText}>© 2025 Study App</Text>
+                <Text style={styles.footerText}>© 2025 Pawductivity</Text>
             </View>
         </View>
     )
@@ -111,10 +103,11 @@ const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: 'bold',
         color: '#333',
+        marginTop: 10,
+        marginBottom: -10,
     },
     heroContainer: {
         alignItems: 'center',
-        marginBottom: 20,
         paddingHorizontal: 20,
     },
     heroTitle: {

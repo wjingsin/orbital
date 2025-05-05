@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 
-import Img1 from '../assets/pom2.png';
-import Img2 from '../assets/pom2.png';
-import Img3 from '../assets/pom1.png';
+import Img1 from '../assets/pugwalk1.png';
+import Img2 from '../assets/pugwalk2.png';
+import Img3 from '../assets/pugwalk3.png';
 
 const AnimatedImage = () => {
     const images = [Img1, Img2, Img3];
@@ -12,7 +12,7 @@ const AnimatedImage = () => {
     useEffect(() => {
         const interval = setInterval(() => {
             setIndex((prev) => (prev + 1) % images.length);
-        }, 500);
+        }, 200);
 
         return () => clearInterval(interval);
     }, []);
@@ -25,7 +25,7 @@ const AnimatedImage = () => {
 };
 
 export default AnimatedImage;
-const x = 1.7;
+const x = 0.7;
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
@@ -34,7 +34,8 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     img: {
-        width: 228 * x,
-        height: 218 * x,
+        width: 555 * x,
+        height: 489 * x,
+        borderRadius: 5,
     },
 });

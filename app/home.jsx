@@ -7,8 +7,9 @@ import InAppLayout from "../components/InAppLayout"
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Spacer from "../components/Spacer";
 import Pom from "../components/pom_animated"
-import Pug from "../components/pom_animated"
+import Pug from "../components/pug_animated"
 import { usePetData, PET_TYPES } from "../contexts/PetContext"
+import {Link} from "expo-router";
 
 // PetStats component that manages decreasing stats over time
 const PetStats = () => {
@@ -140,11 +141,12 @@ const Home = () => {
 
     return (
         <View style={styles.container}>
+            <Text style={styles.header}>Home</Text>
             {/* Pet Display */}
-            <Spacer height={30}/>
+            <Spacer height={20}/>
             <View style={styles.petContainer}>
                 <View style={styles.petNameContainer}>
-                    <Text style={styles.petName}>{petData.petName}</Text>
+                    <Text style={styles.petName}> {petData.petName}</Text>
                 </View>
 
                 <View style={styles.petDisplayArea}>
@@ -179,7 +181,15 @@ const Home = () => {
                         <Text style={styles.treatText}>Feed Treat</Text>
                     </TouchableOpacity>
                 </View>
+
             </View>
+        <View style={{justifyContent: 'center', alignItems: 'center'}}>
+            <Link href="/petSelection" asChild>
+                <TouchableOpacity style={styles.mainButton}>
+                    <Text style={styles.mainButtonText}>Edit Profile</Text>
+                </TouchableOpacity>
+            </Link>
+        </View>
         </View>
     )
 }
@@ -195,6 +205,32 @@ export default function HomeWrapper() {
 }
 
 const styles = StyleSheet.create({
+    mainButton: {
+        backgroundColor: '#eb7d42',
+        width: '93%',
+        paddingVertical: 15,
+        borderRadius: 13,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
+        marginBottom: 20,
+
+    },
+    mainButtonText: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    header: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginTop: 50,
+        textAlign: 'center',
+        color: '#343a40',
+    },
     container: {
         flex: 1,
         backgroundColor: '#ffffff',
@@ -218,22 +254,21 @@ const styles = StyleSheet.create({
     petContainer: {
         flex: 1,
         marginHorizontal: 16,
-        marginTop: 20,
         marginBottom: 20,
         backgroundColor: '#ffffff',
-        borderRadius: 16,
+        borderRadius: 15,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 15,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 10,
         padding: 16,
         justifyContent: 'space-between',
     },
     petNameContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'left',
         marginBottom: 10,
     },
     petName: {
@@ -248,14 +283,12 @@ const styles = StyleSheet.create({
         marginVertical: 0,
     },
     petBackground: {
-        backgroundColor: '#f9f9f9',
-        width: '100%',
-        borderRadius: 16,
+        backgroundColor: '#b81e1e',
+        width: '369',
+        height: '340',
         paddingVertical: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#f0f0f0',
         overflow: 'hidden',
     },
     statsContainer: {
@@ -295,7 +328,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 20,
+        marginBottom: 10
     },
     treatButton: {
         flexDirection: 'row',
