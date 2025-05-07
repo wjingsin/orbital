@@ -9,6 +9,7 @@ import { ClerkProvider } from '@clerk/clerk-expo'
 import { PetProvider } from '../contexts/PetContext';
 
 import useClerkFirebaseSync from '../hooks/useClerkFirebaseSync';
+import {TokensProvider} from "../contexts/TokenContext";
 
 const RootLayout = () => {
     const colorScheme = useColorScheme()
@@ -26,11 +27,13 @@ const RootLayout = () => {
 
 
         return (
+            <TokensProvider>
                 <PetProvider>
-                <ThemedView style={{flex: 1}}>
-                    <Slot />
-                </ThemedView>
+                    <ThemedView style={{flex: 1}}>
+                        <Slot />
+                    </ThemedView>
                 </PetProvider>
+            </TokensProvider>
         )
     }
 

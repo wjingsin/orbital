@@ -1,8 +1,8 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, ImageBackground } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { FontAwesome5 } from '@expo/vector-icons'
 import { PointsProvider, usePoints } from "../contexts/PointsContext"
-import Corgi from "../components/corgi_animated"
+import Corgi from "../components/corgi_jumping"
 import InAppLayout from "../components/InAppLayout"
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Spacer from "../components/Spacer";
@@ -10,6 +10,20 @@ import Pom from "../components/pom_animated"
 import Pug from "../components/pug_animated"
 import { usePetData, PET_TYPES } from "../contexts/PetContext"
 import {Link} from "expo-router";
+import {TokensProvider, useTokens} from "../contexts/TokenContext";
+
+// Import background images
+import background1 from '../assets/living room.png';
+import background2 from '../assets/living room.png';
+import background3 from '../assets/living room.png';
+
+// Map of background IDs to image sources
+const backgroundImages = {
+    '1': background1,
+    '2': background2,
+    '3': background3,
+    // Add more as needed
+};
 
 // PetStats component that manages decreasing stats over time
 const PetStats = () => {
@@ -106,30 +120,89 @@ const PetStats = () => {
             <View style={styles.statsContainer}>
                 <StatBar label="Happiness" value={happiness} maxValue={100} color="#FF9966" />
                 <StatBar label="Energy" value={energy} maxValue={100} color="#66CCFF" />
-                <StatBar label="Health" value={health} maxValue={100} color="#99CC66" />
+                <StatBar label="Hunger" value={health} maxValue={100} color="#99CC66" />
             </View>
         )
     }
 }
 
-const PetDisplay = ({ petType }) => {
+const PetDisplay = ({ petType, backgroundData }) => {
+    // Get the background image from the ID
+    let backgroundImage = null;
+
+    if (backgroundData) {
+        try {
+            const parsedData = typeof backgroundData === 'string'
+                ? JSON.parse(backgroundData)
+                : backgroundData;
+
+            if (parsedData.imagePath && backgroundImages[parsedData.imagePath]) {
+                backgroundImage = backgroundImages[parsedData.imagePath];
+            }
+        } catch (error) {
+            console.error('Error parsing background data:', error);
+        }
+    }
+
+    // Render pet with background image
+    let PetComponent;
     switch (petType) {
         case 0: // Corgi
-            return <Corgi />;
+            PetComponent = Corgi;
+            break;
         case 1: // Pomeranian
-            return <Pom />;
+            PetComponent = Pom;
+            break;
         case 2: // Pug
-            return <Pug />;
+            PetComponent = Pug;
+            break;
         default:
-            return <Corgi />; // Default to Corgi if something goes wrong
+            PetComponent = Corgi;
     }
+
+    return (
+        <View style={styles.petBackground}>
+            {backgroundImage ? (
+                <ImageBackground
+                    source={backgroundImage}
+                    style={styles.backgroundImage}
+                    resizeMode="cover"
+                >
+                    <PetComponent />
+                </ImageBackground>
+            ) : (
+                // Default light gray background if no image
+                <View style={[styles.backgroundImage, { backgroundColor: '#f0f0f0' }]}>
+                    <PetComponent />
+                </View>
+            )}
+        </View>
+    );
 };
 
 const Home = () => {
     const { points, minusPoint } = usePoints()
+    const { points: tokens } = useTokens()
     const petStatsManager = PetStats()
     const { StatBars, increaseStats } = petStatsManager
     const { petData, isLoading } = usePetData()
+    const [backgroundData, setBackgroundData] = useState(null)
+
+    // Load selected background on mount
+    useEffect(() => {
+        const loadBackground = async () => {
+            try {
+                const savedBackground = await AsyncStorage.getItem('selectedBackground')
+                if (savedBackground) {
+                    setBackgroundData(savedBackground)
+                }
+            } catch (error) {
+                console.error('Failed to load background:', error)
+            }
+        }
+
+        loadBackground()
+    }, [])
 
     // Function to feed the pet
     const feedPet = () => {
@@ -146,13 +219,18 @@ const Home = () => {
             <Spacer height={20}/>
             <View style={styles.petContainer}>
                 <View style={styles.petNameContainer}>
-                    <Text style={styles.petName}> {petData.petName}</Text>
+                    <Text style={styles.petName}>{petData.petName}</Text>
+
+                    <Link href="/shop" asChild>
+                        <TouchableOpacity style={styles.tokenIndicator}>
+                            <FontAwesome5 name="paw" size={16} color="#505a98" />
+                            <Text style={styles.tokenText}>{tokens}</Text>
+                        </TouchableOpacity>
+                    </Link>
                 </View>
 
                 <View style={styles.petDisplayArea}>
-                    <View style={styles.petBackground}>
-                        <PetDisplay petType={petData.selectedPet} />
-                    </View>
+                    <PetDisplay petType={petData.selectedPet} backgroundData={backgroundData} />
                 </View>
 
                 {/* Pet Stats */}
@@ -183,24 +261,26 @@ const Home = () => {
                 </View>
 
             </View>
-        <View style={{justifyContent: 'center', alignItems: 'center'}}>
-            <Link href="/petSelection" asChild>
-                <TouchableOpacity style={styles.mainButton}>
-                    <Text style={styles.mainButtonText}>Edit Profile</Text>
-                </TouchableOpacity>
-            </Link>
-        </View>
+            <View style={{justifyContent: 'center', alignItems: 'center'}}>
+                <Link href="/petSelection" asChild>
+                    <TouchableOpacity style={styles.mainButton}>
+                        <Text style={styles.mainButtonText}>Edit Profile</Text>
+                    </TouchableOpacity>
+                </Link>
+            </View>
         </View>
     )
 }
 
 export default function HomeWrapper() {
     return (
-        <PointsProvider>
-            <InAppLayout>
-                <Home />
-            </InAppLayout>
-        </PointsProvider>
+        <TokensProvider>
+            <PointsProvider>
+                <InAppLayout>
+                    <Home />
+                </InAppLayout>
+            </PointsProvider>
+        </TokensProvider>
     )
 }
 
@@ -217,7 +297,6 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 3,
         marginBottom: 20,
-
     },
     mainButtonText: {
         color: 'white',
@@ -246,10 +325,25 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ffead9',
     },
+    tokenIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f4fbff',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#b3e8ff',
+    },
     pointsText: {
         marginLeft: 6,
         fontWeight: '600',
         color: '#eb7d42',
+    },
+    tokenText: {
+        marginLeft: 6,
+        fontWeight: '600',
+        color: '#505a98',
     },
     petContainer: {
         flex: 1,
@@ -268,7 +362,7 @@ const styles = StyleSheet.create({
     petNameContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'left',
+        justifyContent: 'space-between',
         marginBottom: 10,
     },
     petName: {
@@ -283,13 +377,18 @@ const styles = StyleSheet.create({
         marginVertical: 0,
     },
     petBackground: {
-        backgroundColor: '#b81e1e',
-        width: '369',
-        height: '340',
-        paddingVertical: 20,
+        width: 369,
+        height: 300,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
+        borderRadius: 20,
+    },
+    backgroundImage: {
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     statsContainer: {
         marginTop: 20,
@@ -352,5 +451,4 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: 'white',
     },
-    // Journal styles removed
 })

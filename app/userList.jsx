@@ -1,5 +1,5 @@
 // app/userConnection.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -9,11 +9,12 @@ import {
     Image,
     ActivityIndicator,
     RefreshControl,
-    Alert
+    Alert,
+    Animated
 } from 'react-native';
-import {Link, useRouter} from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import {FontAwesome5, Ionicons} from '@expo/vector-icons';
+import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Import Firebase services
 import {
@@ -25,7 +26,8 @@ import InAppLayout from "../components/InAppLayout";
 import { usePetData, PET_TYPES } from '../contexts/PetContext';
 import Spacer from "../components/Spacer";
 import Corgi from "../components/corgi_animated";
-import {SignOutButtonSmall} from "../components/SignOutButtonSmall";
+import { SignOutButtonSmall } from "../components/SignOutButtonSmall";
+import { useTokens } from "../contexts/TokenContext";
 
 // Pet images (same as in pet-selection.js)
 const PET_IMAGES = {
@@ -39,14 +41,83 @@ export default function UserConnectionScreen() {
     const { user } = useUser();
     const router = useRouter();
     const { petData } = usePetData();
+    const { points, addPoint } = useTokens();
 
     const [loading, setLoading] = useState(true);
-    const [signingOut, setSigningOut] = useState(false);
     const [users, setUsers] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
     const [onlineCount, setOnlineCount] = useState(0);
+    const [tokenRate, setTokenRate] = useState(1);
+    const [earnedThisSession, setEarnedThisSession] = useState(0);
+
+    // Animation values
+    const tokenPulse = useRef(new Animated.Value(1)).current;
+    const tokenEarnedAnim = useRef(new Animated.Value(0)).current;
+    const tokenEarnedOpacity = useRef(new Animated.Value(0)).current;
+
     // Use the hook to ensure user data is synced with Firebase
     useClerkFirebaseSync();
+
+    // Handle token earning
+    useEffect(() => {
+        let intervalId;
+        let tokensToAdd = 0;
+
+        // Calculate token rate (1 + number of online users)
+        const newTokenRate = onlineCount + 1;
+        setTokenRate(newTokenRate);
+
+        // Set up interval to add tokens
+        intervalId = setInterval(() => {
+            // Add points and update session count
+            addPoint(newTokenRate);
+            setEarnedThisSession(prev => prev + newTokenRate);
+
+            // Trigger animation
+            pulseTokenIcon();
+            showEarnedAnimation(newTokenRate);
+        }, 60000);
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [onlineCount]);
+
+    // Animation functions
+    const pulseTokenIcon = () => {
+        Animated.sequence([
+            Animated.timing(tokenPulse, {
+                toValue: 1.2,
+                duration: 200,
+                useNativeDriver: true
+            }),
+            Animated.timing(tokenPulse, {
+                toValue: 1,
+                duration: 200,
+                useNativeDriver: true
+            })
+        ]).start();
+    };
+
+    const showEarnedAnimation = (amount) => {
+        // Reset position
+        tokenEarnedAnim.setValue(0);
+        tokenEarnedOpacity.setValue(1);
+
+        // Animate floating up and fading
+        Animated.parallel([
+            Animated.timing(tokenEarnedAnim, {
+                toValue: -50,
+                duration: 1000,
+                useNativeDriver: true
+            }),
+            Animated.timing(tokenEarnedOpacity, {
+                toValue: 0,
+                duration: 1000,
+                useNativeDriver: true
+            })
+        ]).start();
+    };
 
     useEffect(() => {
         let unsubscribeOnlineUsers;
@@ -105,33 +176,14 @@ export default function UserConnectionScreen() {
         }, 1000);
     };
 
-    // Function to get the appropriate image based on online count
-    const getCountImage = () => {
-        if (onlineCount === 1) {
-            return require('../assets/pom1.png'); // Replace with your actual one user image
-        } else if (onlineCount === 2) {
-            return require('../assets/pom1.png'); // Replace with your actual two users image
-        } else {
-            return require('../assets/corgi1.png'); // Replace with your actual many users image
-        }
-    };
-
-    // Add a debug button to help troubleshoot
-    const forceExit = () => {
-        setLoading(false);
-    };
-    //
-    // if (loading) {
-    //     return (
-    //         <View style={styles.loadingContainer}>
-    //             <ActivityIndicator size="large" color="#eb7d42" />
-    //             <Text style={styles.loadingText}>Loading...</Text>
-    //             <TouchableOpacity style={styles.debugButton} onPress={forceExit}>
-    //                 <Text style={styles.debugButtonText}>Debug: Force Exit Loading</Text>
-    //             </TouchableOpacity>
-    //         </View>
-    //     );
-    // }
+    if (loading) {
+        // return (
+        //     <View style={styles.loadingContainer}>
+        //         <ActivityIndicator size="large" color="#eb7d42" />
+        //         <Text style={styles.loadingText}>Loading...</Text>
+        //     </View>
+        // );
+    }
 
     return (
         <View style={styles.container}>
@@ -142,13 +194,46 @@ export default function UserConnectionScreen() {
                     <Text style={styles.headerText}>    Playground</Text>
                     <SignOutButtonSmall />
                     <Spacer width={20} />
-
                 </View>
-                {/*<Image*/}
-                {/*    source={getCountImage()}*/}
-                {/*    style={styles.countImage}*/}
-                {/*    resizeMode="contain"*/}
-                {/*/>*/}
+
+                {/* Token Display */}
+                <View style={styles.tokenContainer}>
+                    <View style={styles.totalTokensContainer}>
+                        <Animated.View style={{ transform: [{ scale: tokenPulse }] }}>
+                            <MaterialCommunityIcons name="paw" size={24} color="#505a98" />
+                        </Animated.View>
+                        <Text style={styles.totalTokens}>{points}</Text>
+
+                        {/* Animated earned tokens */}
+                        <Animated.Text
+                            style={[
+                                styles.earnedTokens,
+                                {
+                                    opacity: tokenEarnedOpacity,
+                                    transform: [{ translateY: tokenEarnedAnim }]
+                                }
+                            ]}
+                        >
+                            +{tokenRate}
+                        </Animated.Text>
+                    </View>
+
+                    <View style={styles.tokenRateContainer}>
+                        <Text style={styles.tokenRateText}>
+                            {tokenRate} <MaterialCommunityIcons name="paw" size={14} color="#505a98" /> / min
+                        </Text>
+                        <Text style={styles.tokenBoostText}>
+                            {onlineCount > 0 ? `+${onlineCount*100}% boost from other pets!` : 'No boost'}
+                        </Text>
+                    </View>
+
+                    <View style={styles.sessionStatsContainer}>
+                        <Text style={styles.sessionStatsText}>
+                            Earned this visit: {earnedThisSession}
+                        </Text>
+                    </View>
+                </View>
+
                 <Spacer height={10} />
                 <Corgi />
                 <Spacer height={20} />
@@ -162,12 +247,6 @@ export default function UserConnectionScreen() {
                     {users.length === 0 ? (
                         <View style={styles.emptyContainer}>
                             <Text style={styles.emptyText}>No pets are currently online</Text>
-                            {/*<TouchableOpacity*/}
-                            {/*    style={styles.refreshButton}*/}
-                            {/*    onPress={onRefresh}*/}
-                            {/*>*/}
-                            {/*    <Text style={styles.refreshButtonText}>Refresh</Text>*/}
-                            {/*</TouchableOpacity>*/}
                         </View>
                     ) : (
                         <FlatList
@@ -312,6 +391,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingBottom: 100,
+
     },
     emptyText: {
         fontSize: 16,
@@ -372,5 +452,62 @@ const styles = StyleSheet.create({
     statusText: {
         fontSize: 14,
         color: '#666',
+    },
+    tokenContainer: {
+        backgroundColor: '#fafcff',
+        borderRadius: 15,
+        padding: 15,
+        marginHorizontal: 15,
+        marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    totalTokensContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    totalTokens: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#333',
+        marginLeft: 8,
+    },
+    earnedTokens: {
+        position: 'absolute',
+        right: -20,
+        color: '#505a98',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    tokenRateContainer: {
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    tokenRateText: {
+        fontSize: 16,
+        color: '#555',
+        fontWeight: '600',
+    },
+    tokenBoostText: {
+        fontSize: 12,
+        color: '#676767',
+        marginTop: 2,
+        fontWeight: '500',
+    },
+    sessionStatsContainer: {
+        alignItems: 'center',
+        marginTop: 8,
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#eaeaea',
+    },
+    sessionStatsText: {
+        fontSize: 12,
+        color: '#888',
     },
 });

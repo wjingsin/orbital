@@ -25,7 +25,7 @@ const AnimatedImage = () => {
 };
 
 export default AnimatedImage;
-const x = 0.7;
+const x = 0.3;
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',

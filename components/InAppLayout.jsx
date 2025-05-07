@@ -34,7 +34,7 @@ const RootLayout = ({ children }) => {
                 <Link href="/home" asChild>
                     <Pressable style={styles.footerItem}>
                         <FontAwesome
-                            name="paw"
+                            name="home"
                             size={26}
                             color={pathname === "/home" ? activeColor : inactiveColor}
                         />

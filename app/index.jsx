@@ -20,7 +20,7 @@ const Index = () => {
                 <Text style={styles.appTitle}>Pawductivity</Text>
             </View>
 
-            {/*<SignedIn>*/}
+            <SignedIn>
             {/*    <View style={styles.welcomeContainer}>*/}
             {/*        <Text style={styles.welcomeText}>*/}
             {/*            Welcome back,*/}
@@ -32,16 +32,16 @@ const Index = () => {
 
             {/*    <Spacer height={30} />*/}
 
-            {/*    <Link href="/home" asChild>*/}
-            {/*        <TouchableOpacity style={styles.mainButton}>*/}
-            {/*            <Text style={styles.mainButtonText}>Continue to Home</Text>*/}
-            {/*        </TouchableOpacity>*/}
-            {/*    </Link>*/}
+                <Link href="/home" asChild>
+                    <TouchableOpacity style={styles.mainButton}>
+                        <Text style={styles.mainButtonText}>Continue to Home</Text>
+                    </TouchableOpacity>
+                </Link>
 
-            {/*    <Spacer height={20} />*/}
+                <Spacer height={20} />
 
-            {/*    <SignOutButton />*/}
-            {/*</SignedIn>*/}
+                <SignOutButton />
+            </SignedIn>
 
             <SignedOut>
                 <View style={styles.heroContainer}>
