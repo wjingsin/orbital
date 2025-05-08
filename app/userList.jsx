@@ -10,26 +10,35 @@ import {
     ActivityIndicator,
     RefreshControl,
     Alert,
-    Animated
+    Animated,
+    ImageBackground
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-
-// Import Firebase services
-import {
-    updateUserStatus,
-    subscribeToOnlineUsers
-} from '../firebaseService';
+import { updateUserStatus, subscribeToOnlineUsers } from '../firebaseService';
 import useClerkFirebaseSync from '../hooks/useClerkFirebaseSync';
 import InAppLayout from "../components/InAppLayout";
 import { usePetData, PET_TYPES } from '../contexts/PetContext';
 import Spacer from "../components/Spacer";
-import Corgi from "../components/corgi_animated";
+import Corgi from "../components/corgi_jumping";
 import { SignOutButtonSmall } from "../components/SignOutButtonSmall";
 import { useTokens } from "../contexts/TokenContext";
+import Pom from "../components/pom_animated";
+import Pug from "../components/pug_animated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Pet images (same as in pet-selection.js)
+// Background images
+import background1 from '../assets/living room.png';
+import background2 from '../assets/living room.png';
+import background3 from '../assets/living room.png';
+
+const backgroundImages = {
+    '1': background1,
+    '2': background2,
+    '3': background3,
+};
+
 const PET_IMAGES = {
     corgi: require('../assets/corgi1.png'),
     pomeranian: require('../assets/pom1.png'),
@@ -49,33 +58,38 @@ export default function UserConnectionScreen() {
     const [onlineCount, setOnlineCount] = useState(0);
     const [tokenRate, setTokenRate] = useState(1);
     const [earnedThisSession, setEarnedThisSession] = useState(0);
+    const [backgroundData, setBackgroundData] = useState(null);
 
     // Animation values
     const tokenPulse = useRef(new Animated.Value(1)).current;
     const tokenEarnedAnim = useRef(new Animated.Value(0)).current;
     const tokenEarnedOpacity = useRef(new Animated.Value(0)).current;
 
-    // Use the hook to ensure user data is synced with Firebase
     useClerkFirebaseSync();
 
-    // Handle token earning
+    useEffect(() => {
+        const loadBackground = async () => {
+            try {
+                const savedBackground = await AsyncStorage.getItem('selectedBackground');
+                if (savedBackground) {
+                    setBackgroundData(savedBackground);
+                }
+            } catch (error) {
+                console.error('Failed to load background:', error);
+            }
+        };
+        loadBackground();
+    }, []);
+
     useEffect(() => {
         let intervalId;
-        let tokensToAdd = 0;
-
-        // Calculate token rate (1 + number of online users)
         const newTokenRate = onlineCount + 1;
         setTokenRate(newTokenRate);
 
-        // Set up interval to add tokens
         intervalId = setInterval(() => {
-            // Add points and update session count
             addPoint(newTokenRate);
             setEarnedThisSession(prev => prev + newTokenRate);
-
-            // Trigger animation
             pulseTokenIcon();
-            showEarnedAnimation(newTokenRate);
         }, 60000);
 
         return () => {
@@ -83,7 +97,6 @@ export default function UserConnectionScreen() {
         };
     }, [onlineCount]);
 
-    // Animation functions
     const pulseTokenIcon = () => {
         Animated.sequence([
             Animated.timing(tokenPulse, {
@@ -100,11 +113,8 @@ export default function UserConnectionScreen() {
     };
 
     const showEarnedAnimation = (amount) => {
-        // Reset position
         tokenEarnedAnim.setValue(0);
         tokenEarnedOpacity.setValue(1);
-
-        // Animate floating up and fading
         Animated.parallel([
             Animated.timing(tokenEarnedAnim, {
                 toValue: -50,
@@ -127,63 +137,150 @@ export default function UserConnectionScreen() {
             if (!user) return;
 
             try {
-                // Set user as online
                 await updateUserStatus(user.id, 'online');
-
-                // Subscribe to online users
                 unsubscribeOnlineUsers = subscribeToOnlineUsers(user.id, (onlineUsers) => {
                     if (isActive) {
-                        // Filter out current user
                         const otherUsers = onlineUsers.filter(u => u.userId !== user.id);
                         setUsers(otherUsers);
                         setOnlineCount(otherUsers.length);
                     }
                 });
-
-                if (isActive) {
-                    setLoading(false);
-                }
+                setLoading(false);
             } catch (error) {
                 console.error('Error initializing user:', error);
-                if (isActive) {
-                    // Set loading to false even on error to prevent infinite loading state
-                    setLoading(false);
-                    // Show error message to user
-                    Alert.alert('Error', 'Failed to load user data. Please try again later.');
-                }
+                setLoading(false);
+                Alert.alert('Error', 'Failed to load user data. Please try again later.');
             }
         };
 
         initializeUser();
 
-        // Set user as offline when component unmounts
         return () => {
             isActive = false;
-            if (unsubscribeOnlineUsers) {
-                unsubscribeOnlineUsers();
-            }
-            if (user) {
-                updateUserStatus(user.id, 'offline');
-            }
+            if (unsubscribeOnlineUsers) unsubscribeOnlineUsers();
+            if (user) updateUserStatus(user.id, 'offline');
         };
     }, [user]);
 
     const onRefresh = async () => {
         setRefreshing(true);
-        // The subscription will update the users list automatically
-        setTimeout(() => {
-            setRefreshing(false);
-        }, 1000);
+        setTimeout(() => setRefreshing(false), 1000);
     };
 
-    if (loading) {
-        // return (
-        //     <View style={styles.loadingContainer}>
-        //         <ActivityIndicator size="large" color="#eb7d42" />
-        //         <Text style={styles.loadingText}>Loading...</Text>
-        //     </View>
-        // );
-    }
+    const getPetComponent = (petType) => {
+        switch (petType) {
+            case 0: return Corgi;
+            case 1: return Pom;
+            case 2: return Pug;
+            default: return Corgi;
+        }
+    };
+
+    const DelayedPet = ({ delay, petType, style }) => {
+        const [showPet, setShowPet] = useState(false);
+
+        useEffect(() => {
+            const timer = setTimeout(() => {
+                setShowPet(true);
+            }, delay);
+            return () => clearTimeout(timer);
+        }, [delay]);
+
+        const PetComponent = getPetComponent(petType);
+
+        if (!showPet) return null;
+
+        return (
+            <View style={style}>
+                <PetComponent />
+            </View>
+        );
+    };
+
+    const PetDisplay = ({ petType, backgroundData, onlineUsers }) => {
+        let backgroundImage = null;
+
+        if (backgroundData) {
+            try {
+                const parsedData = typeof backgroundData === 'string'
+                    ? JSON.parse(backgroundData)
+                    : backgroundData;
+                if (parsedData.imagePath && backgroundImages[parsedData.imagePath]) {
+                    backgroundImage = backgroundImages[parsedData.imagePath];
+                }
+            } catch (error) {
+                console.error('Error parsing background data:', error);
+            }
+        }
+
+        const MainPetComponent = getPetComponent(petType);
+
+        return (
+            <View style={styles.petBackground}>
+                {backgroundImage ? (
+                    <ImageBackground
+                        source={backgroundImage}
+                        style={styles.backgroundImage}
+                        resizeMode="cover"
+                    >
+                        {/* Main pet */}
+                        <View style={styles.petAbsoluteFill}>
+                            <MainPetComponent />
+                        </View>
+
+                        {/* Additional pets from online users */}
+                        {onlineUsers.slice(0, 3).map((user, index) => {
+                            const OnlinePetComponent = getPetComponent(user.petSelection);
+                            return (
+                                <DelayedPet
+                                    key={user.userId}
+                                    delay={500 * (index + 1)} // 500ms, 1000ms, 1500ms
+                                    petType={user.petSelection}
+                                    style={[
+                                        styles.petAbsoluteFill,
+                                        {
+
+                                            left: `${(index * 5)}%`,
+                                            top: `${(index * 5)}%`,
+                                            zIndex: index + 1,
+                                        }
+                                    ]}
+                                >
+                                    <OnlinePetComponent />
+                                </DelayedPet>
+                            );
+                        })}
+                    </ImageBackground>
+                ) : (
+                    <View style={[styles.backgroundImage, { backgroundColor: '#f0f0f0' }]}>
+                        <View style={styles.petAbsoluteFill}>
+                            <MainPetComponent />
+                        </View>
+                        {onlineUsers.slice(0, 3).map((user, index) => {
+                            const OnlinePetComponent = getPetComponent(user.petSelection);
+                            return (
+                                <DelayedPet
+                                    key={user.userId}
+                                    delay={500 * (index + 1)} // 500ms, 1000ms, 1500ms
+                                    petType={user.petSelection}
+                                    style={[
+                                        styles.petAbsoluteFill,
+                                        {
+                                            left: `${(index * 5)}%`,
+                                            top: `${(index * 5)}%`,
+                                            zIndex: index + 1,
+                                        }
+                                    ]}
+                                >
+                                    <OnlinePetComponent />
+                                </DelayedPet>
+                            );
+                        })}
+                    </View>
+                )}
+            </View>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -191,20 +288,17 @@ export default function UserConnectionScreen() {
             <InAppLayout>
                 <View style={styles.headerContainer}>
                     <View style={styles.headerLeftSpace} />
-                    <Text style={styles.headerText}>    Playground</Text>
+                    <Text style={styles.headerText}>     Focus</Text>
                     <SignOutButtonSmall />
                     <Spacer width={20} />
                 </View>
 
-                {/* Token Display */}
                 <View style={styles.tokenContainer}>
                     <View style={styles.totalTokensContainer}>
                         <Animated.View style={{ transform: [{ scale: tokenPulse }] }}>
                             <MaterialCommunityIcons name="paw" size={24} color="#505a98" />
                         </Animated.View>
                         <Text style={styles.totalTokens}>{points}</Text>
-
-                        {/* Animated earned tokens */}
                         <Animated.Text
                             style={[
                                 styles.earnedTokens,
@@ -235,7 +329,13 @@ export default function UserConnectionScreen() {
                 </View>
 
                 <Spacer height={10} />
-                <Corgi />
+                <View style={styles.petDisplayArea}>
+                    <PetDisplay
+                        petType={petData.selectedPet}
+                        backgroundData={backgroundData}
+                        onlineUsers={users}
+                    />
+                </View>
                 <Spacer height={20} />
 
                 <View style={styles.listContainer}>
@@ -272,14 +372,14 @@ export default function UserConnectionScreen() {
                                     </View>
                                 </View>
                             )}
-                            refreshControl={
-                                <RefreshControl
-                                    refreshing={refreshing}
-                                    onRefresh={onRefresh}
-                                    colors={['#eb7d42']}
-                                />
-                            }
-                            contentContainerStyle={{ paddingBottom: 20 }}
+                            // refreshControl={
+                            //     <RefreshControl
+                            //         refreshing={refreshing}
+                            //         onRefresh={onRefresh}
+                            //         colors={['#eb7d42']}
+                            //     />
+                            // }
+                            // contentContainerStyle={{ paddingBottom: 20 }}
                         />
                     )}
                 </View>
@@ -290,44 +390,9 @@ export default function UserConnectionScreen() {
 }
 
 const styles = StyleSheet.create({
-    secondaryButton: {
-        backgroundColor: 'transparent',
-        padding: 8,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#eb7d42',
-        alignItems: 'center',
-        marginRight: 25,
-        },
-
-    secondaryButtonText: {
-        color: '#eb7d42',
-        fontSize: 12,
-        fontWeight: '700',
-        },
     container: {
         flex: 1,
         backgroundColor: '#f8f8f8',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8f8f8',
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
-    },
-    debugButton: {
-        marginTop: 20,
-        padding: 10,
-        backgroundColor: '#ddd',
-        borderRadius: 5,
-    },
-    debugButtonText: {
-        color: '#333',
     },
     headerContainer: {
         flexDirection: 'row',
@@ -336,11 +401,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     headerLeftSpace: {
-        // This creates an empty space on the left to balance the points indicator
-        width: 70, // Adjust based on your points indicator width
-    },
-    headerSpacer: {
-        width: 80,
+        width: 70,
     },
     headerText: {
         fontSize: 24,
@@ -348,110 +409,6 @@ const styles = StyleSheet.create({
         color: '#333',
         flex: 1,
         textAlign: 'center',
-    },
-    onlineCount: {
-        fontSize: 16,
-        color: '#666',
-        fontWeight: '500',
-    },
-    countImage: {
-        width: '100%',
-        height: 200,
-        marginBottom: 20,
-    },
-    listContainer: {
-        flex: 1,
-        backgroundColor: '#fff',
-        marginHorizontal: 16,
-        borderRadius: 10,
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 1,
-        shadowRadius: 4,
-        elevation: 3,
-        overflow: 'hidden',
-    },
-    listHeaderContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#f0f0f0',
-        borderBottomWidth: 1,
-        borderColor: '#e0e0e0',
-    },
-    listHeaderText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingBottom: 100,
-
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 16,
-    },
-    refreshButton: {
-        backgroundColor: '#eb7d42',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 6,
-    },
-    refreshButtonText: {
-        color: '#fff',
-        fontWeight: '600',
-    },
-    userCard: {
-        backgroundColor: '#fff',
-        padding: 16,
-        marginHorizontal: 0,
-        marginTop: 0,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    userInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    avatar: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        marginRight: 16,
-    },
-    userName: {
-        fontSize: 14,
-        color: '#666',
-    },
-    petName: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-    },
-    statusContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 4,
-    },
-    statusIndicator: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginRight: 6,
-    },
-    statusText: {
-        fontSize: 14,
-        color: '#666',
     },
     tokenContainer: {
         backgroundColor: '#fafcff',
@@ -509,5 +466,116 @@ const styles = StyleSheet.create({
     sessionStatsText: {
         fontSize: 12,
         color: '#888',
+    },
+    petBackground: {
+        width: '100%',
+        height: 300,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        borderRadius: 20,
+        marginBottom: 20,
+    },
+    backgroundImage: {
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    petAbsoluteFill: {
+        position: 'absolute',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    petDisplayArea: {
+        marginHorizontal: 15,
+    },
+    listContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+        marginHorizontal: 16,
+        borderRadius: 10,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        elevation: 3,
+        overflow: 'hidden',
+    },
+    listHeaderContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#f0f0f0',
+        borderBottomWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    listHeaderText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    onlineCount: {
+        fontSize: 16,
+        color: '#666',
+        fontWeight: '500',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingBottom: 100,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 16,
+    },
+    userCard: {
+        backgroundColor: '#fff',
+        padding: 16,
+        marginHorizontal: 0,
+        marginTop: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        marginRight: 16,
+    },
+    userName: {
+        fontSize: 14,
+        color: '#666',
+    },
+    petName: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    statusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    statusIndicator: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 6,
+    },
+    statusText: {
+        fontSize: 14,
+        color: '#666',
     },
 });

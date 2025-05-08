@@ -16,6 +16,8 @@ import {TokensProvider, useTokens} from "../contexts/TokenContext";
 import background1 from '../assets/living room.png';
 import background2 from '../assets/living room.png';
 import background3 from '../assets/living room.png';
+import {useUser} from "@clerk/clerk-expo";
+import { updateUserStatus, subscribeToOnlineUsers } from '../firebaseService';
 
 // Map of background IDs to image sources
 const backgroundImages = {
@@ -273,6 +275,11 @@ const Home = () => {
 }
 
 export default function HomeWrapper() {
+    const { user } = useUser();
+    updateUserStatus(user.id, 'offline');
+    useEffect(() => {
+        updateUserStatus(user.id, 'offline');
+    })
     return (
         <TokensProvider>
             <PointsProvider>

@@ -6,10 +6,12 @@ import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
 import { SignOutButton } from '../components/SignOutButton'
 import { PointsProvider, usePoints } from "../contexts/PointsContext"
 import Spacer from "../components/Spacer"
+import { useRouter } from 'expo-router';
 
 const Index = () => {
     const { user } = useUser()
     const { points } = usePoints()
+
 
     return (
         <View style={styles.container}>

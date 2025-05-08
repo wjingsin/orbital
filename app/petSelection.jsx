@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { usePetData, PET_TYPES } from '../contexts/PetContext';
 import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
+import {updateUserStatus} from "../firebaseService";
 
 // Pet images
 const PET_IMAGES = {
@@ -120,7 +121,8 @@ export default function PetSelectionScreen() {
             });
 
             // Navigate to the next screen
-            router.replace('/home'); // Replace with your desired route
+            router.replace('/afterAugment'); // Replace with your desired route
+
         } catch (error) {
             console.error('Error saving data:', error);
             Alert.alert('Error', 'Failed to save your information. Please try again.');
