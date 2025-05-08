@@ -44,15 +44,12 @@ const PetLayerDisplay = ({ users, currentUser }) => {
     const [visiblePets, setVisiblePets] = useState([]);
     const { petData } = usePetData();
 
-    // Reset and animate when users list changes
+    // Reset and update when users list changes
     useEffect(() => {
-        // Reset visible pets
-        setVisiblePets([]);
-
         // Create a new array with unique users
         const uniqueUsersMap = new Map();
 
-        // Add current user first
+        // First add current user's pet
         uniqueUsersMap.set(currentUser.id, {
             userId: currentUser.id,
             petSelection: petData.selectedPet,
@@ -93,15 +90,19 @@ const PetLayerDisplay = ({ users, currentUser }) => {
                 {visiblePets.map((pet, index) => {
                     const PetComponent = getPetComponent(pet.petSelection);
 
-                    // Position all pets at the bottom center
-                    const position = { bottom: 10, alignSelf: 'center' };
+                    // Calculate offsets - slight horizontal and vertical variations
+                    const horizontalOffset = index * 40; // 15 pixels right for each pet
+                    const verticalOffset = index * 30;    // 5 pixels up for each pet
 
                     return (
                         <View
                             key={pet.userId}
                             style={[
                                 styles.petLayer,
-                                position,
+                                {
+                                    bottom: 10 - verticalOffset,
+                                    left: 20 + horizontalOffset,
+                                }
                             ]}
                         >
                             <PetComponent />
@@ -112,7 +113,6 @@ const PetLayerDisplay = ({ users, currentUser }) => {
         </ImageBackground>
     );
 };
-
 export default function UserConnectionScreen() {
     const { signOut } = useAuth();
     const { user } = useUser();
