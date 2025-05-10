@@ -10,7 +10,7 @@ export default function YourComponent() {
     useEffect(() => {
         const timer = setTimeout(() => {
             router.push('/home');
-        }, 1); // Show for 2 seconds before navigating
+        }, 100); // Show for 2 seconds before navigating
 
         return () => clearTimeout(timer);
     }, []);

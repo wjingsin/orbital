@@ -19,7 +19,9 @@ import { useRouter } from 'expo-router';
 import { usePetData, PET_TYPES } from '../contexts/PetContext';
 import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import {updateUserStatus} from "../firebaseService";
+import { updateUserStatus } from "../firebaseService";
+import { doc, updateDoc } from 'firebase/firestore'; // <-- Add this
+import { db } from '../firebaseConfig'; // <-- Add this
 
 // Pet images
 const PET_IMAGES = {
@@ -103,7 +105,6 @@ export default function PetSelectionScreen() {
 
         // Everything is valid, proceed with saving
         setIsSaving(true);
-
         try {
             // First update user profile if signed in
             if (isSignedIn && user) {
@@ -119,6 +120,20 @@ export default function PetSelectionScreen() {
                 petName: petName.trim(),
                 isConfirmed: true,
             });
+
+            // --- UPDATE FIRESTORE WITH PET INFO ---
+            if (isSignedIn && user) {
+                try {
+                    const userRef = doc(db, 'users', user.id);
+                    await updateDoc(userRef, {
+                        petSelection: selectedIndex,
+                        petName: petName.trim(),
+                    });
+                } catch (error) {
+                    console.error('Failed to update pet info in Firestore:', error);
+                    // Optionally show an alert or toast
+                }
+            }
 
             // Navigate to the next screen
             router.replace('/afterAugment'); // Replace with your desired route

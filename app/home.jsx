@@ -9,25 +9,25 @@ import Spacer from "../components/Spacer";
 import Pom from "../components/pom_animated"
 import Pug from "../components/pug_animated"
 import { usePetData, PET_TYPES } from "../contexts/PetContext"
-import {Link} from "expo-router";
-import {TokensProvider, useTokens} from "../contexts/TokenContext";
+import { Link } from "expo-router";
+import { TokensProvider, useTokens } from "../contexts/TokenContext";
+import { useUser } from "@clerk/clerk-expo";
+import { updateUserStatus } from '../firebaseService';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
 // Import background images
 import background1 from '../assets/living room.png';
 import background2 from '../assets/living room.png';
 import background3 from '../assets/living room.png';
-import {useUser} from "@clerk/clerk-expo";
-import { updateUserStatus, subscribeToOnlineUsers } from '../firebaseService';
 
 // Map of background IDs to image sources
 const backgroundImages = {
     '1': background1,
     '2': background2,
     '3': background3,
-    // Add more as needed
 };
 
-// PetStats component that manages decreasing stats over time
 const PetStats = () => {
     const [happiness, setHappiness] = useState(100)
     const [energy, setEnergy] = useState(100)
@@ -173,7 +173,6 @@ const PetDisplay = ({ petType, backgroundData }) => {
                     <PetComponent />
                 </ImageBackground>
             ) : (
-                // Default light gray background if no image
                 <View style={[styles.backgroundImage, { backgroundColor: '#f0f0f0' }]}>
                     <PetComponent />
                 </View>
@@ -189,6 +188,7 @@ const Home = () => {
     const { StatBars, increaseStats } = petStatsManager
     const { petData, isLoading } = usePetData()
     const [backgroundData, setBackgroundData] = useState(null)
+    const { user, isLoaded, isSignedIn } = useUser();
 
     // Load selected background on mount
     useEffect(() => {
@@ -205,6 +205,38 @@ const Home = () => {
 
         loadBackground()
     }, [])
+
+    // --- FIREBASE SYNC: Update pet name/type in Firestore when changed ---
+    useEffect(() => {
+        const updatePetInFirebase = async () => {
+            if (
+                isLoaded &&
+                isSignedIn &&
+                user &&
+                petData &&
+                typeof petData.selectedPet === 'number' &&
+                typeof petData.petName === 'string'
+            ) {
+                try {
+                    const userRef = doc(db, 'users', user.id);
+                    await updateDoc(userRef, {
+                        petSelection: petData.selectedPet,
+                        petName: petData.petName.trim(),
+                    });
+                } catch (error) {
+                    console.error('Failed to update pet info in Firestore (Home):', error);
+                }
+            }
+        };
+        updatePetInFirebase();
+    }, [
+        isLoaded,
+        isSignedIn,
+        user,
+        petData.selectedPet,
+        petData.petName
+    ]);
+    // ---------------------------------------------------------------
 
     // Function to feed the pet
     const feedPet = () => {
@@ -276,10 +308,11 @@ const Home = () => {
 
 export default function HomeWrapper() {
     const { user } = useUser();
-    updateUserStatus(user.id, 'offline');
     useEffect(() => {
-        updateUserStatus(user.id, 'offline');
-    })
+        if (user) {
+            updateUserStatus(user.id, 'offline');
+        }
+    }, [user]);
     return (
         <TokensProvider>
             <PointsProvider>

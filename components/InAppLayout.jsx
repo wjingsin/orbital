@@ -1,10 +1,7 @@
-import { Slot, Stack, usePathname, Link } from 'expo-router'
-import { StyleSheet, Text, useColorScheme, View, Pressable, TouchableOpacity } from 'react-native'
+import { usePathname, Link } from 'expo-router'
+import { StyleSheet, useColorScheme, Pressable } from 'react-native'
 import { Colors } from '../constants/Colors'
-import { StatusBar } from 'expo-status-bar'
 import ThemedView from "../components/ThemedView";
-import { PointsProvider } from "../contexts/PointsContext";
-import Spacer from "../components/Spacer";
 import { FontAwesome } from '@expo/vector-icons';
 
 const RootLayout = ({ children }) => {
@@ -13,7 +10,7 @@ const RootLayout = ({ children }) => {
     const pathname = usePathname();
 
     // Define the active and inactive colors for the icons
-    const activeColor = '#dc8d51'; // Changed from theme.tint to orange
+    const activeColor = '#dc8d51'; // Orange
     const inactiveColor = theme.tabIconDefault || '#cac8c3';
 
     return (
@@ -42,13 +39,23 @@ const RootLayout = ({ children }) => {
                 </Link>
 
                 <Link href="/userList" asChild>
-                    <TouchableOpacity style={styles.footerItem}>
+                    <Pressable style={styles.footerItem}>
                         <FontAwesome
-                            name="users"
+                            name="user"
                             size={26}
                             color={pathname === "/userList" ? activeColor : inactiveColor}
                         />
-                    </TouchableOpacity>
+                    </Pressable>
+                </Link>
+
+                <Link href="/leaderboard" asChild>
+                    <Pressable style={styles.footerItem}>
+                        <FontAwesome
+                            name="users"
+                            size={26}
+                            color={pathname === "/leaderboard" ? activeColor : inactiveColor}
+                        />
+                    </Pressable>
                 </Link>
             </ThemedView>
         </ThemedView>
@@ -58,36 +65,6 @@ const RootLayout = ({ children }) => {
 export default RootLayout
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    title: {
-        fontWeight: 'bold',
-        fontSize: 36
-    },
-    img: {
-        width: 200,
-        height: 200,
-        margin: 20
-    },
-    card: {
-        backgroundColor: '#eee',
-        padding: 20,
-        borderRadius: 5,
-        boxShadow: '4px 4px rgba(0, 0, 0, 0.1)'
-    },
-    link: {
-        marginVertical: 20
-    },
-    layoutTop: {
-        marginTop: 60,
-        alignItems: 'center',
-    },
-    header: {
-        fontSize: 28,
-    },
     layoutBottom: {
         flexDirection: 'row',
         justifyContent: 'space-around',
@@ -95,10 +72,13 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingBottom: 25,
         backgroundColor: '#fafafa',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
     },
     footerItem: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 5,
+        flex: 1, // Evenly space icons
     }
 })
