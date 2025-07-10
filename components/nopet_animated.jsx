@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons'; // Assuming you're using Expo
+import { MaterialIcons } from '@expo/vector-icons';
 
 const NoPetPlaceholder = () => {
     return (

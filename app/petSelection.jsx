@@ -21,7 +21,8 @@ import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { updateUserStatus } from "../firebaseService";
 import { doc, updateDoc } from 'firebase/firestore'; // <-- Add this
-import { db } from '../firebaseConfig'; // <-- Add this
+import { db } from '../firebaseConfig';
+import AsyncStorage from "@react-native-async-storage/async-storage"; // <-- Add this
 
 // Pet images
 const PET_IMAGES = {
@@ -120,6 +121,15 @@ export default function PetSelectionScreen() {
                 isConfirmed: true,
                 hasPet: true, // <-- Set hasPet true here
             });
+
+            // Reset pet stats to 100 AND reset the timestamp
+            const currentTime = Date.now();
+            await AsyncStorage.setItem('petStats', JSON.stringify({
+                happiness: 100,
+                energy: 100,
+                health: 100
+            }));
+            await AsyncStorage.setItem('lastUpdateTime', currentTime.toString());
 
             // Update Firestore with pet info and hasPet true
             if (isSignedIn && user) {

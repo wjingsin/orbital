@@ -1,10 +1,8 @@
-// __tests__/Focus.test.jsx
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import FocusTimer from '../app/focus';
 
-// Mock contexts
 jest.mock('../contexts/PetContext', () => ({
     usePetData: jest.fn(() => ({
         petData: { selectedPet: 0, petName: 'TestPet', hasPet: true },
@@ -18,7 +16,6 @@ jest.mock('../contexts/TokenContext', () => ({
     })),
 }));
 
-// Mock components
 jest.mock('../components/InAppLayout', () => ({ children }) => children);
 jest.mock('../components/Spacer', () => () => null);
 jest.mock('../components/corgi_sniffing_park', () => 'CorgiSniffing');
@@ -28,15 +25,12 @@ jest.mock('../components/pom_running_park', () => 'PomRunning');
 jest.mock('../components/pug_animated', () => 'PugAnimated');
 jest.mock('../components/nopet_animated', () => 'NoPetAnimated');
 
-// Mock slider
 jest.mock('@react-native-community/slider', () => 'Slider');
 
-// Mock Icons
 jest.mock('@expo/vector-icons', () => ({
     MaterialCommunityIcons: ({ name }) => name,
 }));
 
-// Mock Alert
 jest.spyOn(Alert, 'alert');
 
 describe('FocusTimer', () => {
@@ -80,7 +74,6 @@ describe('FocusTimer', () => {
         });
 
         expect(getByText('100')).toBeTruthy();
-        // Based on your component, the text includes an icon name between number and "/ sec"
         expect(getByText(/paw/)).toBeTruthy();
         expect(getByText(/\/ sec/)).toBeTruthy();
         expect(getByText('Earned this session: 0')).toBeTruthy();
@@ -133,7 +126,6 @@ describe('FocusTimer', () => {
             fireEvent.press(getByText('START'));
         });
 
-        // Wait a moment for the interval to trigger
         await waitFor(() => {
             expect(mockAddPoint).toHaveBeenCalled();
         }, { timeout: 2000 });

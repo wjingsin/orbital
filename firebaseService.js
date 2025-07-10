@@ -15,7 +15,6 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
-// User Management
 
 
 
@@ -35,7 +34,6 @@ export const updateUserStatus = async (userId, status) => {
 };
 
 
-// NEW: Get all users (online and offline)
 export const getAllUsers = async (limitCount = 50) => {
     try {
         const usersRef = collection(db, 'users');
@@ -52,28 +50,22 @@ export const getAllUsers = async (limitCount = 50) => {
     }
 };
 
-// Real-time listener for online users who are in the same study group
 export const subscribeToOnlineUsers = (currentUserId, callback) => {
     try {
-        // First get the current user's study group
         const userRef = doc(db, 'users', currentUserId);
 
         return onSnapshot(userRef, async (userDoc) => {
             if (userDoc.exists()) {
                 const userData = userDoc.data();
 
-                // Get the user's study groups
                 const groupsRef = collection(db, 'studyGroups');
                 const groupQuery = query(groupsRef, where('members', 'array-contains', currentUserId));
                 const groupSnapshot = await getDocs(groupQuery);
 
-                // If user is in a group, get other online members
                 if (!groupSnapshot.empty) {
                     const groupDoc = groupSnapshot.docs[0]; // Get the first group (users can only be in one)
                     const groupData = groupDoc.data();
                     const groupMembers = groupData.members || [];
-
-                    // Query for online users who are also in this group
                     const usersRef = collection(db, 'users');
                     const q = query(
                         usersRef,
@@ -87,7 +79,6 @@ export const subscribeToOnlineUsers = (currentUserId, callback) => {
                         const onlineUsers = [];
 
                         querySnapshot.forEach((doc) => {
-                            // Only include users who are in the same group
                             if (groupMembers.includes(doc.id) || groupMembers.includes(doc.data().userId)) {
                                 onlineUsers.push({ id: doc.id, ...doc.data() });
                             }
@@ -98,7 +89,6 @@ export const subscribeToOnlineUsers = (currentUserId, callback) => {
 
                     return unsubscribeUsers;
                 } else {
-                    // User is not in any group, return empty array
                     callback([]);
                     return () => {};
                 }
@@ -109,28 +99,8 @@ export const subscribeToOnlineUsers = (currentUserId, callback) => {
         throw error;
     }
 };
-
-//
-// // NEW: Real-time listener for all users (online and offline)
-// export const subscribeToUserStatusChanges = (callback) => {
-//     try {
-//         const usersRef = collection(db, 'users');
-//         return onSnapshot(usersRef, (snapshot) => {
-//             const users = [];
-//             snapshot.forEach((doc) => {
-//                 users.push({ id: doc.id, ...doc.data() });
-//             });
-//             callback(users);
-//         });
-//     } catch (error) {
-//         console.error('Error subscribing to user status changes:', error);
-//         throw error;
-//     }
-// };
-
 export const createStudyGroup = async (userId, groupName) => {
     try {
-        // Get user info
         const userRef = doc(db, 'users', userId);
         const userSnap = await getDoc(userRef);
 
@@ -140,7 +110,6 @@ export const createStudyGroup = async (userId, groupName) => {
 
         const userData = userSnap.data();
 
-        // Create a new study group document
         const groupsRef = collection(db, 'studyGroups');
         const newGroupRef = await addDoc(groupsRef, {
             name: groupName,
@@ -167,7 +136,6 @@ export const inviteToStudyGroup = async (groupId, inviteeId, currentUser) => {
             throw new Error('User not authenticated');
         }
 
-        // Get group info
         const groupRef = doc(db, 'studyGroups', groupId);
         const groupSnap = await getDoc(groupRef);
 
@@ -177,20 +145,16 @@ export const inviteToStudyGroup = async (groupId, inviteeId, currentUser) => {
 
         const groupData = groupSnap.data();
 
-        // Check if user is already a member
         if (groupData.members.includes(inviteeId)) {
             throw new Error('User is already a member of this group');
         }
 
-        // Get invitee info
         const inviteeRef = doc(db, 'users', inviteeId);
         const inviteeSnap = await getDoc(inviteeRef);
 
         if (!inviteeSnap.exists()) {
             throw new Error('Invitee not found');
         }
-
-        // Create invitation
         const invitesRef = collection(db, 'groupInvites');
         const newInviteRef = await addDoc(invitesRef, {
             groupId,
@@ -211,10 +175,8 @@ export const inviteToStudyGroup = async (groupId, inviteeId, currentUser) => {
 
 
 
-// Accept a study group invitation
 export const acceptStudyGroupInvite = async (inviteId, userId, groupId) => {
     try {
-        // Get invitation
         const inviteRef = doc(db, 'groupInvites', inviteId);
         const inviteSnap = await getDoc(inviteRef);
 
@@ -224,18 +186,15 @@ export const acceptStudyGroupInvite = async (inviteId, userId, groupId) => {
 
         const inviteData = inviteSnap.data();
 
-        // Check if this invitation is for the current user
         if (inviteData.inviteeId !== userId) {
             throw new Error('This invitation is not for you');
         }
 
-        // Update invitation status
         await updateDoc(inviteRef, {
             status: 'accepted',
             respondedAt: serverTimestamp()
         });
 
-        // Add user to group
         const groupRef = doc(db, 'studyGroups', groupId);
         const groupSnap = await getDoc(groupRef);
 
@@ -243,7 +202,6 @@ export const acceptStudyGroupInvite = async (inviteId, userId, groupId) => {
             throw new Error('Study group not found');
         }
 
-        // Get user info
         const userRef = doc(db, 'users', userId);
         const userSnap = await getDoc(userRef);
 
@@ -273,7 +231,6 @@ export const acceptStudyGroupInvite = async (inviteId, userId, groupId) => {
     }
 };
 
-// Decline a study group invitation
 export const declineStudyGroupInvite = async (inviteId) => {
     try {
         const inviteRef = doc(db, 'groupInvites', inviteId);
@@ -289,7 +246,6 @@ export const declineStudyGroupInvite = async (inviteId) => {
     }
 };
 
-// Get user's study groups
 export const getUserStudyGroups = async (userId) => {
     try {
         const groupsRef = collection(db, 'studyGroups');
@@ -311,7 +267,6 @@ export const getUserStudyGroups = async (userId) => {
     }
 };
 
-// Get user's pending study group invitations
 export const getStudyGroupInvites = async (userId) => {
     try {
         const invitesRef = collection(db, 'groupInvites');
@@ -337,7 +292,6 @@ export const getStudyGroupInvites = async (userId) => {
     }
 };
 
-// Add this function to your firebaseService.js file
 export const leaveStudyGroup = async (userId, groupId) => {
     try {
         const groupRef = doc(db, 'studyGroups', groupId);
@@ -349,22 +303,18 @@ export const leaveStudyGroup = async (userId, groupId) => {
 
         const groupData = groupSnap.data();
 
-        // Check if user is a member
         if (!groupData.members.includes(userId)) {
             throw new Error('You are not a member of this group');
         }
 
-        // Remove user from group
         const newMembers = groupData.members.filter(id => id !== userId);
         const newMemberNames = (groupData.memberNames || []).filter(member => member.id !== userId);
 
-        // If this is the last member, delete the group
         if (newMembers.length === 0) {
             await deleteDoc(groupRef);
             return { deleted: true };
         }
 
-        // Otherwise update the group
         await updateDoc(groupRef, {
             members: newMembers,
             memberNames: newMemberNames,
@@ -377,7 +327,6 @@ export const leaveStudyGroup = async (userId, groupId) => {
         throw error;
     }
 };
-// Add this to your firebaseService.js file
 export const subscribeToGroupMemberChanges = (groupId, callback) => {
     const groupRef = doc(db, 'studyGroups', groupId);
 
@@ -385,7 +334,6 @@ export const subscribeToGroupMemberChanges = (groupId, callback) => {
         if (docSnapshot.exists()) {
             const groupData = docSnapshot.data();
             if (groupData.members && Array.isArray(groupData.members)) {
-                // Get full user data for each member
                 const memberPromises = groupData.members.map(async (memberId) => {
                     try {
                         const userDoc = await getDoc(doc(db, 'users', memberId));

@@ -11,7 +11,6 @@ import { db } from '../firebaseConfig';
 import { usePetData, PET_TYPES } from "../contexts/PetContext";
 import { PointsProvider, usePoints } from "../contexts/PointsContext"
 
-// Import background images
 import background1 from '../assets/living room.png';
 import background2 from '../assets/wreck_it_ralph_880.0.1491200032.png';
 import background3 from '../assets/starry_night.png';

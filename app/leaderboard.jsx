@@ -35,8 +35,6 @@ import { db } from '../firebaseConfig';
 import {FontAwesome, FontAwesome5, MaterialIcons} from "@expo/vector-icons";
 import { debounce } from 'lodash';
 
-
-// Pet images
 const PET_IMAGES = {
     corgi: require('../assets/corgi_sit.png'),
     pomeranian: require('../assets/pom_sit.png'),
@@ -52,7 +50,6 @@ export default function LeaderboardScreen() {
     const { user } = useUser();
     const { points } = useTokens();
 
-    // Study group states
     const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
     const [groupName, setGroupName] = useState('');
     const [studyGroups, setStudyGroups] = useState([]);
@@ -63,20 +60,17 @@ export default function LeaderboardScreen() {
     const [activeTab, setActiveTab] = useState('leaderboard'); // 'leaderboard', 'groups'
     const [showInvitesModal, setShowInvitesModal] = useState(false);
 
-    // ADD THESE NEW STATE VARIABLES
     const [debouncedPoints, setDebouncedPoints] = useState(points);
 
 
-    // ADD THIS DEBOUNCE EFFECT
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedPoints(points);
-        }, 5000); // 2 second delay
+        }, 5000);
 
         return () => clearTimeout(timer);
     }, [points]);
 
-    // REPLACE THE OLD TOKEN SYNC WITH THIS
     useEffect(() => {
         const syncTokens = async () => {
             if (user && typeof debouncedPoints === 'number') {
@@ -89,7 +83,7 @@ export default function LeaderboardScreen() {
             }
         };
         syncTokens();
-    }, [user, debouncedPoints]); // Use debouncedPoints instead of points
+    }, [user, debouncedPoints]);
 
     useEffect(() => {
         let unsubscribe;
@@ -97,7 +91,6 @@ export default function LeaderboardScreen() {
             setLoading(true);
             setError(null);
             try {
-                // Get initial user data with limit
                 const allUsers = await getAllUsers(50); // Add limit parameter
                 setUsers(sortUsers(allUsers, user));
 
@@ -114,7 +107,7 @@ export default function LeaderboardScreen() {
                         });
                         return sortUsers(updatedUsers, user);
                     });
-                }, 3000); // 3-second debounce
+                }, 3000);
 
                 unsubscribe = subscribeToOnlineUsersOnly(debouncedUpdateOnlineUsers);
             } catch (err) {
@@ -130,7 +123,6 @@ export default function LeaderboardScreen() {
         };
     }, [user]);
 
-    // Fetch study groups and invites
     useEffect(() => {
         const fetchStudyGroupData = async () => {
             if (user) {
@@ -145,13 +137,10 @@ export default function LeaderboardScreen() {
             }
         };
         fetchStudyGroupData();
-        // Set up a real-time listener for invites and groups in a production app
     }, [user]);
-    // Add this useEffect at the top level of your component with other useEffects
     useEffect(() => {
         let unsubscribe;
         if (activeTab === 'groups' && studyGroups.length > 0 && studyGroups[0]?.id) {
-            // Subscribe to member changes for the current group
             const debouncedGroupUpdate = debounce((updatedMembers) => {
                 setStudyGroups(prevGroups => {
                     if (prevGroups.length === 0) return prevGroups;
@@ -160,7 +149,7 @@ export default function LeaderboardScreen() {
                         members: updatedMembers
                     }];
                 });
-            }, 1000); // 2-second debounce
+            }, 1000);
 
             unsubscribe = subscribeToGroupMemberChanges(studyGroups[0].id, debouncedGroupUpdate);
 
@@ -226,7 +215,6 @@ export default function LeaderboardScreen() {
         }
 
         try {
-            // Check if user is already in a group
             const existingGroups = await getUserStudyGroups(user.id);
             if (existingGroups && existingGroups.length > 0) {
                 Alert.alert('Error', 'You are already a member of a study group');
@@ -236,7 +224,6 @@ export default function LeaderboardScreen() {
             await createStudyGroup(user.id, groupName);
             setGroupName('');
             setShowCreateGroupModal(false);
-            // Refresh study groups
             const groups = await getUserStudyGroups(user.id);
             setStudyGroups(groups);
             Alert.alert('Success', `Study group "${groupName}" created successfully!`);
@@ -291,7 +278,6 @@ export default function LeaderboardScreen() {
 
     const handleAcceptInvite = async (inviteId, groupId) => {
         try {
-            // Check if user is already in a group
             const existingGroups = await getUserStudyGroups(user.id);
             if (existingGroups && existingGroups.length > 0) {
                 Alert.alert('Error', 'You are already a member of a study group');
@@ -299,7 +285,6 @@ export default function LeaderboardScreen() {
             }
 
             await acceptStudyGroupInvite(inviteId, user.id, groupId);
-            // Refresh invites and groups
             const userInvites = await getStudyGroupInvites(user.id);
             setInvites(userInvites);
             const groups = await getUserStudyGroups(user.id);
@@ -314,7 +299,6 @@ export default function LeaderboardScreen() {
     const handleDeclineInvite = async (inviteId) => {
         try {
             await declineStudyGroupInvite(inviteId);
-            // Refresh invites
             const userInvites = await getStudyGroupInvites(user.id);
             setInvites(userInvites);
             Alert.alert('Success', 'Invitation declined');
@@ -327,7 +311,6 @@ export default function LeaderboardScreen() {
     const handleLeaveGroup = async (groupId) => {
         try {
             const result = await leaveStudyGroup(user.id, groupId);
-            // Refresh study groups
             const groups = await getUserStudyGroups(user.id);
             setStudyGroups(groups);
             if (result.deleted) {
@@ -360,7 +343,6 @@ export default function LeaderboardScreen() {
 
     const renderLeaderboard = () => (
         <>
-            {/*<Text style={styles.headerText}>Leaderboard</Text>*/}
             <Spacer height={20} />
             <FlatList
                 data={users}
@@ -551,10 +533,9 @@ export default function LeaderboardScreen() {
         <InAppLayout>
             <View style={styles.container}>
                 <Spacer height={50} />
-                {/* Header with invites button */}
                 <Spacer height={20}/>
                 <View style={styles.headerContainer}>
-                    <Text style={styles.appTitle}>Tasks</Text>
+                    <Text style={styles.appTitle}>Community</Text>
                 </View>
                 <View style={[styles.pointsIndicator, {marginTop: -35}]}>
                     <TouchableOpacity
@@ -565,7 +546,6 @@ export default function LeaderboardScreen() {
                         <Text style={styles.invitesTopButtonText}>({invites.length})</Text>
                     </TouchableOpacity>
                 </View>
-                {/* Tab Navigation */}
                 <View style={styles.tabContainer}>
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'leaderboard' && styles.activeTab]}
@@ -583,7 +563,6 @@ export default function LeaderboardScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Content based on active tab */}
                 <View style={styles.contentContainer}>
                     {activeTab === 'leaderboard' && renderLeaderboard()}
                     {activeTab === 'groups' && renderStudyGroups()}

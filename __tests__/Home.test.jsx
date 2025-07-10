@@ -1,10 +1,7 @@
-// __tests__/Home.test.jsx
-
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import HomeWrapper from '../app/home'; // Changed from Home to HomeWrapper
 
-// Mock expo-router
 jest.mock('expo-router', () => ({
     useRouter: jest.fn(() => ({
         push: jest.fn(),
@@ -15,7 +12,6 @@ jest.mock('expo-router', () => ({
     },
 }));
 
-// Mock Clerk
 jest.mock('@clerk/clerk-expo', () => ({
     useUser: jest.fn(() => ({
         user: { id: 'test-user-id' },
@@ -24,7 +20,6 @@ jest.mock('@clerk/clerk-expo', () => ({
     })),
 }));
 
-// Mock Firebase
 jest.mock('firebase/firestore', () => ({
     doc: jest.fn(),
     updateDoc: jest.fn(() => Promise.resolve()),
@@ -39,7 +34,6 @@ jest.mock('../firebaseService', () => ({
     updateUserStatus: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock AsyncStorage - Fixed to use 'health' instead of 'hunger'
 jest.mock('@react-native-async-storage/async-storage', () => ({
     getItem: jest.fn((key) => {
         if (key === 'petStats') {
@@ -50,7 +44,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     setItem: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock contexts
 jest.mock('../contexts/PetContext', () => ({
     usePetData: jest.fn(() => ({
         petData: { selectedPet: 0, petName: 'TestPet', hasPet: true },
@@ -75,7 +68,6 @@ jest.mock('../contexts/TokenContext', () => ({
     })),
 }));
 
-// Mock hook
 jest.mock('../hooks/useClerkFirebaseSync', () => jest.fn(() => ({
     updateHasPetStatus: jest.fn(),
     updateUserStatus: jest.fn(),
@@ -83,7 +75,6 @@ jest.mock('../hooks/useClerkFirebaseSync', () => jest.fn(() => ({
     authError: null,
 })));
 
-// Mock components
 jest.mock('../components/InAppLayout', () => ({ children }) => children);
 jest.mock('../components/Spacer', () => () => null);
 jest.mock('../components/corgi_walking', () => 'CorgiWalking');
@@ -91,13 +82,15 @@ jest.mock('../components/corgi_jumping', () => 'CorgiJumping');
 jest.mock('../components/pom_walking', () => 'PomWalking');
 jest.mock('../components/pug_animated', () => 'PugAnimated');
 jest.mock('../components/nopet_animated', () => 'NoPetAnimated');
+jest.mock('../components/corgi_sniffwalk', () => 'CorgiSniff');
+jest.mock('../components/pom_sniffwalk', () => 'PomSniff');
 
-// Mock Icons
 jest.mock('@expo/vector-icons', () => ({
     FontAwesome5: ({ name }) => name,
     Entypo: ({ name }) => name,
     FontAwesome: ({ name }) => name,
     Ionicons: ({ name }) => name,
+    AntDesign: ({ name, ...props }) => `AntDesign-${name}`,
 }));
 
 describe('Home Component', () => {
@@ -131,9 +124,9 @@ describe('Home Component', () => {
         expect(mockMinusPoint).toHaveBeenCalled();
     });
 
-    it('displays edit profile link', async () => {
+    it('displays Settings link', async () => {
         const { getByText } = render(<HomeWrapper />);
-        const editProfileLink = getByText('Edit Profile');
+        const editProfileLink = getByText('Settings');
         expect(editProfileLink).toBeTruthy();
     });
 
@@ -177,30 +170,38 @@ describe('Home Component', () => {
     it('updates pet status in firebase when pet becomes inactive', async () => {
         const mockSetPetData = jest.fn();
         const { usePetData } = require('../contexts/PetContext');
+
+        // Start with an active pet
         usePetData.mockReturnValue({
             petData: { selectedPet: 0, petName: 'TestPet', hasPet: true },
             setPetData: mockSetPetData,
             isLoading: false,
         });
 
-        // Mock AsyncStorage to return stats with zero values
         const mockAsyncStorage = require('@react-native-async-storage/async-storage');
+
+        // Initially return normal stats
         mockAsyncStorage.getItem.mockImplementation((key) => {
             if (key === 'petStats') {
-                return Promise.resolve(JSON.stringify({ happiness: 0, energy: 0, health: 0 }));
+                return Promise.resolve(JSON.stringify({ happiness: 50, energy: 50, health: 50 }));
+            }
+            if (key === 'lastUpdateTime') {
+                // Return a time that would cause stats to decay to zero
+                return Promise.resolve((Date.now() - 100000000).toString()); // Very old timestamp
             }
             return Promise.resolve(null);
         });
 
         render(<HomeWrapper />);
 
-        // Wait for the useEffect to process the stats and update pet data
+        // Wait for the component to load stats and process the decay
         await waitFor(() => {
             expect(mockSetPetData).toHaveBeenCalledWith(
                 expect.objectContaining({ hasPet: false })
             );
-        }, { timeout: 3000 });
+        }, { timeout: 5000 });
     });
+
 
     it('renders background image when background data exists', async () => {
         const mockAsyncStorage = require('@react-native-async-storage/async-storage');

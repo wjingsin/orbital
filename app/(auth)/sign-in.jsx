@@ -2,7 +2,7 @@ import { useSignIn } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import { Text, TextInput, TouchableOpacity, View, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native'
 import React, { useState } from 'react'
-import GoogleSignInButton from './GoogleSignInButton' // Adjust path as needed
+import GoogleSignInButton from './GoogleSignInButton'
 
 export default function SignInScreen() {
     const { signIn, setActive, isLoaded } = useSignIn()
@@ -13,33 +13,24 @@ export default function SignInScreen() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
-    // Handle the submission of the sign-in form
     const onSignInPress = async () => {
         if (!isLoaded || loading) return
 
         setLoading(true)
         setError('')
 
-        // Start the sign-in process using the email and password provided
         try {
             const signInAttempt = await signIn.create({
                 identifier: emailAddress,
                 password,
             })
-
-            // If sign-in process is complete, set the created session as active
-            // and redirect the user
             if (signInAttempt.status === 'complete') {
                 await setActive({ session: signInAttempt.createdSessionId })
                 router.replace('/afterAugment')
             } else {
-                // If the status isn't complete, check why. User might need to
-                // complete further steps.
-                // console.error(JSON.stringify(signInAttempt, null, 2))
                 setError('Sign-in process incomplete. Please try again.')
             }
         } catch (err) {
-            // console.error(JSON.stringify(err, null, 2))
             setError('Invalid email or password. Please try again.')
         } finally {
             setLoading(false)
@@ -102,7 +93,6 @@ export default function SignInScreen() {
                     </Link>
                 </View>
 
-                <GoogleSignInButton />
                 <Link href="/" asChild>
                     <TouchableOpacity style={styles.backButton}>
                         <Text style={styles.backButtonText}>Back to Start</Text>

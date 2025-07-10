@@ -10,7 +10,7 @@ export default function YourComponent() {
     useEffect(() => {
         const timer = setTimeout(() => {
             router.push('/home');
-        }, 100); // Show for 2 seconds before navigating
+        }, 100);
 
         return () => clearTimeout(timer);
     }, []);
@@ -19,6 +19,5 @@ export default function YourComponent() {
     const { user } = useUser();
     updateUserStatus(user.id, 'offline');
 
-    // Don't return any button/Link since we're navigating automatically
-    return null; // or a loading indicator if you prefer
+    return null;
 }

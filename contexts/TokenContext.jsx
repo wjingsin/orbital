@@ -6,7 +6,6 @@ const TokenContext = createContext();
 export const TokensProvider = ({ children }) => {
     const [points, setPoints] = useState(0);
 
-    // Load points from storage when app starts
     useEffect(() => {
         const loadPoints = async () => {
             try {
@@ -14,7 +13,6 @@ export const TokensProvider = ({ children }) => {
                 if (storedPoints !== null) {
                     setPoints(parseInt(storedPoints));
                 } else {
-                    // Initialize with some tokens for testing
                     setPoints(5000);
                     await AsyncStorage.setItem('tokenPoints', '5000');
                 }
@@ -25,7 +23,6 @@ export const TokensProvider = ({ children }) => {
         loadPoints();
     }, []);
 
-    // Save points to storage when they change
     useEffect(() => {
         const savePoints = async () => {
             try {

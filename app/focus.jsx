@@ -6,8 +6,8 @@ import Corgi from "../components/corgi_sniffing_park";
 import CorgiJump from "../components/corgi_running_park";
 import Pom from "../components/pom_sniffing_park";
 import PomJump from "../components/pom_running_park";
-import Pug from "../components/pug_animated";
-import PugJump from "../components/pug_animated";
+import Pug from "../components/pug_sniffing_park";
+import PugJump from "../components/pug_running_park";
 import NoPetAnimated from "../components/nopet_animated";
 import InAppLayout from "../components/InAppLayout";
 import { usePetData } from "../contexts/PetContext";
@@ -15,7 +15,6 @@ import { useTokens } from "../contexts/TokenContext";
 import Spacer from "../components/Spacer";
 
 const FocusTimer = () => {
-    // Timer state
     const [timeRemaining, setTimeRemaining] = useState(60 * 60);
     const [selectedTime, setSelectedTime] = useState(60);
     const [isRunning, setIsRunning] = useState(false);
@@ -24,22 +23,17 @@ const FocusTimer = () => {
     const [earnedThisSession, setEarnedThisSession] = useState(0);
     const [tokenRate, setTokenRate] = useState(1);
 
-    // Animation for timer pulse effect
     const pulseAnimation = useRef(new Animated.Value(1)).current;
     const timerRef = useRef(null);
 
-    // Token animation values
     const tokenPulse = useRef(new Animated.Value(1)).current;
     const tokenEarnedAnim = useRef(new Animated.Value(0)).current;
     const tokenEarnedOpacity = useRef(new Animated.Value(0)).current;
 
-    // Get pet data from context
     const { petData } = usePetData();
 
-    // Get token functions from context
     const { points, addPoint } = useTokens();
 
-    // Start/stop pulse animation based on timer state
     useEffect(() => {
         if (isRunning && !isPaused) {
             Animated.loop(
@@ -61,7 +55,6 @@ const FocusTimer = () => {
         }
     }, [isRunning, isPaused]);
 
-    // Update pet animation based on timer state
     useEffect(() => {
         if (isRunning && !isPaused) {
             setPetAnimation('run');
@@ -70,7 +63,6 @@ const FocusTimer = () => {
         }
     }, [isRunning, isPaused]);
 
-    // Animation functions for tokens
     const pulseTokenIcon = () => {
         Animated.sequence([
             Animated.timing(tokenPulse, {
@@ -143,21 +135,18 @@ const FocusTimer = () => {
         };
     }, [isRunning, isPaused, addPoint, tokenRate, timeRemaining, earnedThisSession, points]);
 
-    // Format time for display (MM:SS)
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Handle time selection
     const handleTimeChange = (value) => {
         const minutes = Math.round(value);
         setSelectedTime(minutes);
         setTimeRemaining(minutes * 60);
     };
 
-    // Start timer
     const startTimer = () => {
         setTimeRemaining(selectedTime * 60);
         setIsRunning(true);
@@ -166,19 +155,16 @@ const FocusTimer = () => {
         setEarnedThisSession(0);
     };
 
-    // Pause timer
     const pauseTimer = () => {
         setIsPaused(true);
         setPetAnimation('walk');
     };
 
-    // Resume timer
     const resumeTimer = () => {
         setIsPaused(false);
         setPetAnimation('run');
     };
 
-    // Quit current session
     const quitSession = () => {
         Alert.alert(
             "Quit Session",
@@ -204,16 +190,13 @@ const FocusTimer = () => {
         );
     };
 
-    // Determine which pet component to render
     let PetComponent;
     let PetRunningComponent;
 
     if (!petData.hasPet) {
-        // If user doesn't have a pet, use NoPetAnimated for both states
         PetComponent = NoPetAnimated;
         PetRunningComponent = NoPetAnimated;
     } else {
-        // If user has a pet, determine which pet to show
         switch (petData.selectedPet) {
             case 0: // Corgi
                 PetComponent = Corgi;
@@ -236,19 +219,15 @@ const FocusTimer = () => {
     return (
         <InAppLayout>
             <View style={styles.container}>
-                {/* Header */}
                 <Spacer height={15}/>
                 <View style={styles.headerContainer}>
                     <Text style={styles.header}>Focus</Text>
                 </View>
-                {/* Pet Background and Timer Overlay */}
                 <View style={styles.petBackgroundContainer}>
-                    {/* Pet as background */}
                     <View style={styles.petBackground}>
                         {petAnimation === 'walk' ? <PetComponent /> : <PetRunningComponent />}
                     </View>
 
-                    {/* Timer Overlay */}
                     <View style={styles.timerOverlay}>
                         <Animated.View
                             style={[
@@ -301,8 +280,6 @@ const FocusTimer = () => {
                         </Animated.View>
                     </View>
                 </View>
-
-                {/* Time Selection Slider (only visible when timer is not running) */}
                 {!isRunning && (
                     <View style={styles.tokenContainer}>
                         <Text style={styles.sliderLabel}>
@@ -321,8 +298,6 @@ const FocusTimer = () => {
                         />
                     </View>
                 )}
-
-                {/* Token counter (visible when timer is running) */}
                 {isRunning && (
                     <View style={styles.tokenContainer}>
                         <View style={styles.totalTokensContainer}>
@@ -331,7 +306,6 @@ const FocusTimer = () => {
                             </Animated.View>
                             <Text style={styles.totalTokens}>{points}</Text>
 
-                            {/* Animated earned tokens */}
                             <Animated.Text
                                 style={[
                                     styles.earnedTokens,

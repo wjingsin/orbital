@@ -1,4 +1,3 @@
-// app/userConnection.js
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
@@ -17,7 +16,6 @@ import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Import Firebase services
 import {
     updateUserStatus,
     subscribeToOnlineUsers,
@@ -29,30 +27,25 @@ import { usePetData, PET_TYPES } from '../contexts/PetContext';
 import Spacer from "../components/Spacer";
 import Corgi from "../components/corgi_walking";
 import Pom from "../components/pom_walking";
-import Pug from "../components/pug_animated";
+import Pug from "../components/pug_walking";
 import NoPet from "../components/transparent";
 import { SignOutButtonSmall } from "../components/SignOutButtonSmall";
 import { useTokens } from "../contexts/TokenContext";
 import { debounce } from 'lodash';
 
-// Pet images (same as in pet-selection.js)
 const PET_IMAGES = {
     corgi: require('../assets/corgi1.png'),
     pomeranian: require('../assets/pom1.png'),
     pug: require('../assets/pug1.png'),
 };
 
-// Component to display layered pets with animation
 const PetLayerDisplay = ({ users, currentUser }) => {
     const [visiblePets, setVisiblePets] = useState([]);
     const { petData } = usePetData();
 
-    // Reset and update when users list changes
     useEffect(() => {
-        // Create a new array with unique users
         const uniqueUsersMap = new Map();
 
-        // First add current user's pet
         uniqueUsersMap.set(currentUser.id, {
             userId: currentUser.id,
             petSelection: petData.selectedPet,
@@ -61,27 +54,21 @@ const PetLayerDisplay = ({ users, currentUser }) => {
             hasPet: petData.hasPet
         });
 
-        // Add other users, ensuring no duplicates
         users.forEach(user => {
-            // Only add if not already in the map
             if (!uniqueUsersMap.has(user.userId)) {
                 uniqueUsersMap.set(user.userId, { ...user, isCurrentUser: false });
             }
         });
 
-        // Convert Map to array
         const uniqueUsers = Array.from(uniqueUsersMap.values());
         setVisiblePets(uniqueUsers);
     }, [users, currentUser, petData]);
 
-    // Render the correct pet component based on selection
     const getPetComponent = (petType, hasPet) => {
-        // If user doesn't have a pet, return the alternative animation
         if (hasPet === false) {
             return NoPet;
         }
 
-        // Otherwise return the appropriate pet animation
         switch (petType) {
             case 0: return Corgi;
             case 1: return Pom;
@@ -101,10 +88,8 @@ const PetLayerDisplay = ({ users, currentUser }) => {
                 {visiblePets.map((pet, index) => {
                     const PetComponent = getPetComponent(pet.petSelection, pet.hasPet);
 
-                    // Calculate offsets - slight horizontal and vertical variations
-                    const horizontalOffset = index * 40; // 15 pixels right for each pet
-                    const verticalOffset = index * 30;    // 5 pixels up for each pet
-
+                    const horizontalOffset = index * 40;
+                    const verticalOffset = index * 30;
                     return (
                         <View
                             key={pet.userId}
@@ -138,7 +123,6 @@ export default function UserConnectionScreen() {
     const [tokenRate, setTokenRate] = useState(1);
     const [earnedThisSession, setEarnedThisSession] = useState(0);
 
-    // Animation values
     const tokenPulse = useRef(new Animated.Value(1)).current;
     const tokenEarnedAnim = useRef(new Animated.Value(0)).current;
     const tokenEarnedOpacity = useRef(new Animated.Value(0)).current;
@@ -146,7 +130,6 @@ export default function UserConnectionScreen() {
 
 
 
-    // Use the hook to ensure user data is synced with Firebase
     useClerkFirebaseSync();
     useEffect(() => {
         const fetchGroupName = async () => {
@@ -166,30 +149,24 @@ export default function UserConnectionScreen() {
 
         fetchGroupName();
     }, [user]);
-// Store the current token rate in a ref to avoid stale closure
     const tokenRateRef = useRef(1);
 
-// Update the ref whenever tokenRate changes
     useEffect(() => {
         tokenRateRef.current = tokenRate;
     }, [tokenRate]);
 
-// Handle token earning - update display rate
     useEffect(() => {
         const newTokenRate = onlineCount + 1;
         setTokenRate(newTokenRate);
     }, [onlineCount]);
 
-// Stable interval using ref to get current value
     useEffect(() => {
         const intervalId = setInterval(() => {
-            // ✅ FIXED: Use the ref to get current token rate
             const currentTokenRate = tokenRateRef.current;
 
             addPoint(currentTokenRate);
             setEarnedThisSession(prev => prev + currentTokenRate);
 
-            // Trigger animations
             pulseTokenIcon();
             showEarnedAnimation(currentTokenRate);
         }, 1000);
@@ -197,11 +174,8 @@ export default function UserConnectionScreen() {
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, []); // Empty dependency array but uses current values via ref
+    }, []);
 
-
-
-    // Animation functions
     const pulseTokenIcon = () => {
         Animated.sequence([
             Animated.timing(tokenPulse, {
@@ -218,11 +192,9 @@ export default function UserConnectionScreen() {
     };
 
     const showEarnedAnimation = (amount) => {
-        // Reset position
         tokenEarnedAnim.setValue(0);
         tokenEarnedOpacity.setValue(1);
 
-        // Animate floating up and fading
         Animated.parallel([
             Animated.timing(tokenEarnedAnim, {
                 toValue: -50,
@@ -245,17 +217,15 @@ export default function UserConnectionScreen() {
             if (!user) return;
 
             try {
-                // Set user as online
                 await updateUserStatus(user.id, 'online');
 
-                // Subscribe to online users
                 const debouncedUpdateUsers = debounce((onlineUsers) => {
                     if (isActive) {
                         const otherUsers = onlineUsers.filter(u => u.userId !== user.id);
                         setUsers(otherUsers);
                         setOnlineCount(otherUsers.length);
                     }
-                }, 3000); // 3-second debounce
+                }, 3000);
 
                 unsubscribeOnlineUsers = subscribeToOnlineUsers(user.id, debouncedUpdateUsers);
 
@@ -265,9 +235,7 @@ export default function UserConnectionScreen() {
             } catch (error) {
                 console.error('Error initializing user:', error);
                 if (isActive) {
-                    // Set loading to false even on error to prevent infinite loading state
                     setLoading(false);
-                    // Show error message to user
                     Alert.alert('Error', 'Failed to load user data. Please try again later.');
                 }
             }
@@ -275,7 +243,6 @@ export default function UserConnectionScreen() {
 
         initializeUser();
 
-        // Set user as offline when component unmounts
         return () => {
             isActive = false;
             if (unsubscribeOnlineUsers) {
@@ -289,7 +256,6 @@ export default function UserConnectionScreen() {
 
     const onRefresh = async () => {
         setRefreshing(true);
-        // The subscription will update the users list automatically
         setTimeout(() => {
             setRefreshing(false);
         }, 5000);
@@ -371,7 +337,6 @@ export default function UserConnectionScreen() {
                     )}
                 </View>
                 <Spacer height={20} />
-                {/* Token Display */}
                 <View style={styles.tokenContainer}>
                     <View style={styles.totalTokensContainer}>
                         <Animated.View style={{ transform: [{ scale: tokenPulse }] }}>
@@ -379,7 +344,6 @@ export default function UserConnectionScreen() {
                         </Animated.View>
                         <Text style={styles.totalTokens}>{points}</Text>
 
-                        {/* Animated earned tokens */}
                         <Animated.Text
                             style={[
                                 styles.earnedTokens,
@@ -414,7 +378,6 @@ export default function UserConnectionScreen() {
 }
 
 const styles = StyleSheet.create({
-    // Existing styles...
     secondaryButton: {
         backgroundColor: 'transparent',
         padding: 8,
@@ -460,8 +423,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     headerLeftSpace: {
-        // This creates an empty space on the left to balance the points indicator
-        width: 70, // Adjust based on your points indicator width
+        width: 70,
     },
     headerSpacer: {
         width: 80,
@@ -484,7 +446,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
 
-    // New styles for pet display
     petDisplayArea: {
         width: 405,
         height: 300,
@@ -507,7 +468,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    // Rest of the existing styles
     listContainer: {
         flex: 1,
         backgroundColor: '#fff',

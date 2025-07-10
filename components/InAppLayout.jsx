@@ -9,8 +9,7 @@ const RootLayout = ({ children }) => {
     const theme = Colors[colorScheme] ?? Colors.light
     const pathname = usePathname();
 
-    // Define the active and inactive colors for the icons
-    const activeColor = '#dc8d51'; // Orange
+    const activeColor = '#dc8d51';
     const inactiveColor = theme.tabIconDefault || '#cac8c3';
 
     return (
@@ -28,11 +27,10 @@ const RootLayout = ({ children }) => {
                     </Pressable>
                 </Link>
 
-                {/* New Focus Icon */}
                 <Link href="/focus" asChild>
                     <Pressable style={styles.footerItem}>
                         <MaterialCommunityIcons
-                            name="timer-sand" // Or "hourglass-half"
+                            name="timer-sand"
                             size={22}
                             color={pathname === "/focus" ? activeColor : inactiveColor}
                         />
@@ -90,6 +88,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 5,
-        flex: 1, // Evenly space icons
+        flex: 1,
     }
 })

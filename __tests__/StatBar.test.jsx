@@ -1,9 +1,7 @@
-// __tests__/StatBar.test.jsx
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { View, Text } from 'react-native';
 
-// Simple StatBar component for testing
 const StatBar = ({ label, value, maxValue, color, isPetActive = true }) => {
     const percentage = (value / maxValue) * 100;
     const barColor = isPetActive ? color : "#cccccc";

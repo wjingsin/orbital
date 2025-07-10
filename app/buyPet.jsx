@@ -13,7 +13,7 @@ import {
     ActivityIndicator,
     Alert
 } from 'react-native';
-import {useRouter, useLocalSearchParams, router} from 'expo-router'; // or use navigation prop if using stack navigation
+import {useRouter, useLocalSearchParams, router} from 'expo-router';
 import { usePetData, PET_TYPES } from '../contexts/PetContext';
 import { useUser } from '@clerk/clerk-expo';
 import {FontAwesome5, Ionicons} from '@expo/vector-icons';
@@ -22,29 +22,22 @@ import { db } from '../firebaseConfig';
 import { useTokens } from '../contexts/TokenContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Pet images mapping
 const PET_IMAGES = {
     corgi: require('../assets/corgi1.png'),
     pomeranian: require('../assets/pom1.png'),
     pug: require('../assets/pug1.png'),
 };
 
-// Pet display names
 const PET_NAMES = {
     corgi: 'Corgi',
     pomeranian: 'Pomeranian',
     pug: 'Pug',
 };
 
-export default function BuyPetScreen({ route }) { // Add route prop if using stack navigation
+export default function BuyPetScreen({ route }) {
     const router = useRouter();
 
-    // Option 1: If using expo-router with dynamic routes, you can use useLocalSearchParams
-    // const params = useLocalSearchParams();
-    // const petPrice = parseInt(params.petPrice) || 1000;
-
-    // Option 2: If using stack navigation, use the route prop
-    const petPrice = route?.params?.petPrice || 1000; // default price if not passed
+    const petPrice = route?.params?.petPrice || 1000;
 
     const { petData, setPetData } = usePetData();
     const { isLoaded, isSignedIn, user } = useUser();
@@ -55,13 +48,11 @@ export default function BuyPetScreen({ route }) { // Add route prop if using sta
     const [petError, setPetError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
-    // Handle pet selection
     const handlePetSelection = (index) => {
         setSelectedIndex(index);
         setPetError('');
     };
 
-    // Confirm adoption: deduct tokens, update pet data & Firebase
     const handleConfirm = async () => {
         if (selectedIndex === null) {
             setPetError('Please select a pet type.');
@@ -80,10 +71,8 @@ export default function BuyPetScreen({ route }) { // Add route prop if using sta
 
         setIsSaving(true);
         try {
-            // Deduct tokens
             minusPoint(petPrice);
 
-            // Reset pet stats to 100 AND reset the timestamp
             const currentTime = Date.now();
             await AsyncStorage.setItem('petStats', JSON.stringify({
                 happiness: 100,
@@ -92,7 +81,6 @@ export default function BuyPetScreen({ route }) { // Add route prop if using sta
             }));
             await AsyncStorage.setItem('lastUpdateTime', currentTime.toString());
 
-            // Update pet data in context
             const updatedPetData = {
                 selectedPet: selectedIndex,
                 petName: petName.trim(),
@@ -102,7 +90,6 @@ export default function BuyPetScreen({ route }) { // Add route prop if using sta
 
             await setPetData(updatedPetData);
 
-            // Update Firebase
             if (isSignedIn && user) {
                 const userRef = doc(db, 'users', user.id);
                 await updateDoc(userRef, {

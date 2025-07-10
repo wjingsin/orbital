@@ -23,14 +23,6 @@ const Index = () => {
             </View>
 
             <SignedIn>
-            {/*    <View style={styles.welcomeContainer}>*/}
-            {/*        <Text style={styles.welcomeText}>*/}
-            {/*            Welcome back,*/}
-            {/*        </Text>*/}
-            {/*        <Text style={styles.emailText}>*/}
-            {/*            {user?.emailAddresses[0].emailAddress}*/}
-            {/*        </Text>*/}
-            {/*    </View>*/}
 
                 <Spacer height={180} />
 
@@ -46,11 +38,6 @@ const Index = () => {
             </SignedIn>
 
             <SignedOut>
-                {/*<View style={styles.heroContainer}>*/}
-                {/*    <Text style={styles.heroSubtitle}>*/}
-                {/*        Achieve goals, nurture pets, connect with friends*/}
-                {/*    </Text>*/}
-                {/*</View>*/}
 
                 <Spacer height={150} />
 

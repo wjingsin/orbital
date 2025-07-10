@@ -1,10 +1,8 @@
-// __tests__/Shop.test.jsx
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import Shop from '../app/shop';
 
-// Mock expo-router
 jest.mock('expo-router', () => ({
     router: {
         back: jest.fn(),
@@ -13,7 +11,6 @@ jest.mock('expo-router', () => ({
     Link: ({ children }) => children,
 }));
 
-// Mock contexts
 jest.mock('../contexts/TokenContext', () => ({
     useTokens: jest.fn(() => ({
         points: 2500,
@@ -27,29 +24,23 @@ jest.mock('../contexts/PetContext', () => ({
     })),
 }));
 
-// Mock Clerk
 jest.mock('@clerk/clerk-expo', () => ({
     useUser: jest.fn(() => ({ user: { id: 'test-user' } })),
 }));
 
-// Mock Firebase
 jest.mock('firebase/firestore', () => ({
     doc: jest.fn(),
     updateDoc: jest.fn(),
 }));
 
 jest.mock('../firebaseConfig', () => ({ db: {} }));
-
-// Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
     getItem: jest.fn(() => Promise.resolve(null)),
     setItem: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock components
 jest.mock('../components/InAppLayout', () => ({ children }) => children);
 
-// Mock Alert
 jest.spyOn(Alert, 'alert');
 
 describe('Shop', () => {
@@ -83,7 +74,6 @@ describe('Shop', () => {
         const { getByText, getAllByText } = render(<Shop />);
 
         await act(async () => {
-            // Get the first Purchase button (Living Room background)
             const purchaseButtons = getAllByText('Purchase');
             fireEvent.press(purchaseButtons[0]);
         });
@@ -105,7 +95,6 @@ describe('Shop', () => {
         const { getAllByText } = render(<Shop />);
 
         await act(async () => {
-            // Get the first Purchase button (Living Room background)
             const purchaseButtons = getAllByText('Purchase');
             fireEvent.press(purchaseButtons[0]);
         });

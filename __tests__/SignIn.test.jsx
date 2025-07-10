@@ -1,10 +1,8 @@
-// __tests__/SignIn.test.jsx
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import SignInScreen from '../app/(auth)/sign-in';
 
-// Mock expo-router
 jest.mock('expo-router', () => ({
     useRouter: jest.fn(() => ({
         replace: jest.fn(),
@@ -15,7 +13,7 @@ jest.mock('expo-router', () => ({
     },
 }));
 
-// Mock Clerk
+
 jest.mock('@clerk/clerk-expo', () => ({
     useSignIn: jest.fn(() => ({
         signIn: {
@@ -80,13 +78,11 @@ describe('SignInScreen', () => {
 
         const { getByText, getByPlaceholderText } = render(<SignInScreen />);
 
-        // Fill in form
         const emailInput = getByPlaceholderText('Enter your email');
         const passwordInput = getByPlaceholderText('Enter your password');
         fireEvent.changeText(emailInput, 'test@example.com');
         fireEvent.changeText(passwordInput, 'wrongpassword');
 
-        // Submit form
         await act(async () => {
             fireEvent.press(getByText('Sign In'));
         });
@@ -117,13 +113,11 @@ describe('SignInScreen', () => {
 
         const { getByText, getByPlaceholderText } = render(<SignInScreen />);
 
-        // Fill in form
         const emailInput = getByPlaceholderText('Enter your email');
         const passwordInput = getByPlaceholderText('Enter your password');
         fireEvent.changeText(emailInput, 'test@example.com');
         fireEvent.changeText(passwordInput, 'password123');
 
-        // Submit form
         await act(async () => {
             fireEvent.press(getByText('Sign In'));
         });
@@ -148,13 +142,11 @@ describe('SignInScreen', () => {
 
         const { getByText, getByPlaceholderText } = render(<SignInScreen />);
 
-        // Fill in form
         const emailInput = getByPlaceholderText('Enter your email');
         const passwordInput = getByPlaceholderText('Enter your password');
         fireEvent.changeText(emailInput, 'test@example.com');
         fireEvent.changeText(passwordInput, 'password123');
 
-        // Submit form
         await act(async () => {
             fireEvent.press(getByText('Sign In'));
         });

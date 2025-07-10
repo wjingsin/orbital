@@ -18,17 +18,13 @@ export default function useClerkFirebaseSync() {
     const [authError, setAuthError] = useState(null);
     const [authAttempts, setAuthAttempts] = useState(0);
 
-    // Only attempt authentication a limited number of times to prevent quota issues
     const MAX_AUTH_ATTEMPTS = 3;
 
-    // Cache for study groups to reduce reads
     const [cachedStudyGroups, setCachedStudyGroups] = useState(null);
     const [lastGroupsFetch, setLastGroupsFetch] = useState(0);
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    const CACHE_DURATION = 5 * 60 * 1000;
 
-    // Authenticate with Firebase once when user signs in
     const authenticateWithFirebase = useCallback(async (force = false) => {
-        // Skip if already authenticated or too many attempts
         if (isAuthenticated && !force) return true;
         if (authAttempts >= MAX_AUTH_ATTEMPTS && !force) {
             console.log('Max authentication attempts reached. Skipping.');
@@ -56,14 +52,12 @@ export default function useClerkFirebaseSync() {
         return false;
     }, [isLoaded, isSignedIn, user, getToken, isAuthenticated, authAttempts]);
 
-    // Initialize authentication when user signs in
     useEffect(() => {
         if (isLoaded && isSignedIn && user && !isAuthenticated && authAttempts < MAX_AUTH_ATTEMPTS) {
             authenticateWithFirebase();
         }
     }, [isLoaded, isSignedIn, user, isAuthenticated, authenticateWithFirebase, authAttempts]);
 
-    // Function to update hasPet status in Firebase
     const updateHasPetStatus = useCallback(async (hasPetValue) => {
         if (!isLoaded || !isSignedIn || !user) return;
         if (!isAuthenticated) {
@@ -85,7 +79,6 @@ export default function useClerkFirebaseSync() {
                 });
             }
 
-            // Update local cache
             try {
                 const storedPetData = await AsyncStorage.getItem('@pet_data');
                 if (storedPetData) {
@@ -103,7 +96,6 @@ export default function useClerkFirebaseSync() {
         }
     }, [isLoaded, isSignedIn, user, petContext, authenticateWithFirebase, isAuthenticated]);
 
-    // Function to create a study group
     const createStudyGroup = useCallback(async (groupName) => {
         if (!isLoaded || !isSignedIn || !user) return null;
         if (!isAuthenticated) {
@@ -129,7 +121,6 @@ export default function useClerkFirebaseSync() {
                 updatedAt: serverTimestamp()
             });
 
-            // Invalidate cache
             setCachedStudyGroups(null);
 
             return newGroupRef.id;
@@ -139,7 +130,6 @@ export default function useClerkFirebaseSync() {
         }
     }, [isLoaded, isSignedIn, user, authenticateWithFirebase, isAuthenticated]);
 
-    // Function to invite a user to a study group
     const inviteToStudyGroup = useCallback(async (groupId, inviteeId) => {
         if (!isLoaded || !isSignedIn || !user) return null;
         if (!isAuthenticated) {
@@ -148,7 +138,6 @@ export default function useClerkFirebaseSync() {
         }
 
         try {
-            // Get group info
             const groupRef = doc(db, 'studyGroups', groupId);
             const groupSnap = await getDoc(groupRef);
 
@@ -158,12 +147,10 @@ export default function useClerkFirebaseSync() {
 
             const groupData = groupSnap.data();
 
-            // Check if user is already a member
             if (groupData.members.includes(inviteeId)) {
                 throw new Error('User is already a member of this group');
             }
 
-            // Get invitee info
             const inviteeRef = doc(db, 'users', inviteeId);
             const inviteeSnap = await getDoc(inviteeRef);
 
@@ -171,7 +158,6 @@ export default function useClerkFirebaseSync() {
                 throw new Error('Invitee not found');
             }
 
-            // Create invitation
             const invitesRef = collection(db, 'groupInvites');
             const newInviteRef = doc(invitesRef);
             await setDoc(newInviteRef, {
@@ -192,11 +178,9 @@ export default function useClerkFirebaseSync() {
         }
     }, [isLoaded, isSignedIn, user, authenticateWithFirebase, isAuthenticated]);
 
-    // Function to get user's study groups with caching
     const getUserStudyGroups = useCallback(async (forceRefresh = false) => {
         if (!isLoaded || !isSignedIn || !user) return [];
 
-        // Return cached data if available and not expired
         const now = Date.now();
         if (
             !forceRefresh &&
@@ -224,14 +208,12 @@ export default function useClerkFirebaseSync() {
                 });
             });
 
-            // Update cache
             setCachedStudyGroups(groups);
             setLastGroupsFetch(now);
 
             return groups;
         } catch (error) {
             console.error('Error getting user study groups:', error);
-            // Return cached data if available, even if expired
             if (cachedStudyGroups) {
                 return cachedStudyGroups;
             }
@@ -247,7 +229,6 @@ export default function useClerkFirebaseSync() {
         lastGroupsFetch
     ]);
 
-    // Sync user data to Firebase only once when signed in
     useEffect(() => {
         let isMounted = true;
 
@@ -261,11 +242,9 @@ export default function useClerkFirebaseSync() {
             try {
                 const userRef = doc(db, 'users', user.id);
 
-                // Check if user doc exists first to avoid unnecessary writes
                 const userSnap = await getDoc(userRef);
                 const isNewUser = !userSnap.exists();
 
-                // Get pet data from context or storage
                 let petData = { selectedPet: 0, petName: 'Pet', hasPet: true };
                 if (petContext && petContext.petData) {
                     petData = petContext.petData;
@@ -280,15 +259,12 @@ export default function useClerkFirebaseSync() {
                     }
                 }
 
-                // Get background data from AsyncStorage
                 let backgroundData = null;
                 try {
                     const savedBackground = await AsyncStorage.getItem('selectedBackground');
                     if (savedBackground) {
                         backgroundData = JSON.parse(savedBackground);
                     } else if (!isNewUser && userSnap.data()?.backgroundData) {
-                        // If user exists and has background data in Firebase but not in AsyncStorage,
-                        // update AsyncStorage with Firebase data
                         backgroundData = userSnap.data().backgroundData;
                         await AsyncStorage.setItem(
                             'selectedBackground',
@@ -299,7 +275,6 @@ export default function useClerkFirebaseSync() {
                     console.error('Error handling background data:', error);
                 }
 
-                // Prepare data to update
                 const data = {
                     userId: user.id,
                     displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Anonymous',
@@ -312,16 +287,14 @@ export default function useClerkFirebaseSync() {
                     hasPet: petData.hasPet !== undefined ? petData.hasPet : true,
                 };
 
-                // Include background data if available
                 if (backgroundData) {
                     data.backgroundData = backgroundData;
                 }
 
-                // Only set createdAt and tokens if new user
                 if (isNewUser) {
                     data.createdAt = serverTimestamp();
                     data.tokens = 0;
-                    data.studyGroups = []; // Initialize empty array for study groups
+                    data.studyGroups = [];
                 }
 
                 if (isMounted) {
@@ -339,7 +312,6 @@ export default function useClerkFirebaseSync() {
         };
     }, [isLoaded, isSignedIn, user, isAuthenticated]);
 
-    // Return all the functions so they can be used by components
     return {
         updateHasPetStatus,
         createStudyGroup,

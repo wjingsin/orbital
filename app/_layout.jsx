@@ -13,12 +13,6 @@ import { useAuth } from '@clerk/clerk-expo'
 import useClerkFirebaseSync from '../hooks/useClerkFirebaseSync';
 import {TokensProvider} from "../contexts/TokenContext";
 
-
-// git checkout -b fixed_data
-// git add .
-// git commit -m "Fixed data handling in components and firebase services"
-// git push -u origin fixed_data
-
 const RootLayout = () => {
     const colorScheme = useColorScheme()
     const theme = Colors[colorScheme] ?? Colors.light
@@ -46,14 +40,7 @@ const RootLayout = () => {
     }
 
 export default RootLayout
-// <Stack screenOptions={{
-//     headerSyle: {backgroundColor: '#ddd'},
-//     headerTintColor: '#333',
-// }}>
-//     <Stack.Screen name="index" options={{title: 'Home'}} />
-//     <Stack.Screen name="about" options={{title: 'About'}} />
-//     <Stack.Screen name="contact" options={{title: 'Contact'}} />
-// </Stack>
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -87,7 +74,7 @@ const styles = StyleSheet.create({
     },
     layoutBottom: {
         flexDirection: 'row',
-        justifyContent: 'space-around', // Or 'space-between'
+        justifyContent: 'space-around',
         alignItems: 'center',
         paddingVertical: 10,
         backgroundColor: '#ffffff',

@@ -5,8 +5,6 @@ const PointsContext = createContext();
 
 export const PointsProvider = ({ children }) => {
     const [points, setPoints] = useState(0);
-
-    // Load points from storage when app starts
     useEffect(() => {
         const loadPoints = async () => {
             try {
@@ -21,7 +19,6 @@ export const PointsProvider = ({ children }) => {
         loadPoints();
     }, []);
 
-    // Save points to storage when they change
     useEffect(() => {
         const savePoints = async () => {
             try {
@@ -34,11 +31,11 @@ export const PointsProvider = ({ children }) => {
     }, [points]);
 
     const addPoint = (amount = 100) => {
-        setPoints(prev => prev + amount); // Add the amount to current points
+        setPoints(prev => prev + amount);
     };
 
     const purchasePoint = (amount = 20) => {
-        setPoints(prev => prev + amount); // Add the amount to current points
+        setPoints(prev => prev + amount);
     };
 
     const minusPoint = () => {

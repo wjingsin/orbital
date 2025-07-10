@@ -1,10 +1,8 @@
-// __tests__/BuyPet.test.jsx
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import BuyPetScreen from '../app/buyPet';
 
-// Mock expo-router
 jest.mock('expo-router', () => ({
     useRouter: jest.fn(() => ({
         back: jest.fn(),
@@ -13,7 +11,6 @@ jest.mock('expo-router', () => ({
     useLocalSearchParams: jest.fn(() => ({})),
 }));
 
-// Mock Firebase
 jest.mock('firebase/firestore', () => ({
     doc: jest.fn(),
     updateDoc: jest.fn(() => Promise.resolve()),
@@ -23,12 +20,10 @@ jest.mock('../firebaseConfig', () => ({
     db: {},
 }));
 
-// Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
     setItem: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock Clerk
 jest.mock('@clerk/clerk-expo', () => ({
     useUser: jest.fn(() => ({
         isLoaded: true,
@@ -37,7 +32,6 @@ jest.mock('@clerk/clerk-expo', () => ({
     })),
 }));
 
-// Mock Context hooks
 jest.mock('../contexts/PetContext', () => ({
     usePetData: jest.fn(() => ({
         petData: { selectedPet: null, petName: '', hasPet: false },
@@ -53,7 +47,6 @@ jest.mock('../contexts/TokenContext', () => ({
     })),
 }));
 
-// Mock Alert
 jest.spyOn(Alert, 'alert');
 
 describe('BuyPetScreen', () => {
@@ -84,7 +77,6 @@ describe('BuyPetScreen', () => {
         const corgiOption = getByText('Corgi').parent;
         fireEvent.press(corgiOption);
 
-        // Check if checkmark appears (you might need to adjust this based on your actual implementation)
         expect(corgiOption).toBeTruthy();
     });
 
@@ -100,7 +92,6 @@ describe('BuyPetScreen', () => {
     it('shows error when pet name is empty', () => {
         const { getByText, getByDisplayValue } = render(<BuyPetScreen route={mockRoute} />);
 
-        // Select a pet first
         const corgiOption = getByText('Corgi').parent;
         fireEvent.press(corgiOption);
 
@@ -111,7 +102,6 @@ describe('BuyPetScreen', () => {
     });
 
     it('shows insufficient tokens alert', () => {
-        // Mock insufficient tokens
         const { useTokens } = require('../contexts/TokenContext');
         useTokens.mockReturnValue({
             points: 500, // Less than required 1000
@@ -120,7 +110,6 @@ describe('BuyPetScreen', () => {
 
         const { getByText, getByPlaceholderText } = render(<BuyPetScreen route={mockRoute} />);
 
-        // Select pet and enter name
         const corgiOption = getByText('Corgi').parent;
         fireEvent.press(corgiOption);
 
@@ -155,15 +144,12 @@ describe('BuyPetScreen', () => {
 
         const { getByText, getByPlaceholderText } = render(<BuyPetScreen route={mockRoute} />);
 
-        // Select pet
         const corgiOption = getByText('Corgi').parent;
         fireEvent.press(corgiOption);
 
-        // Enter pet name
         const nameInput = getByPlaceholderText('Enter pet name');
         fireEvent.changeText(nameInput, 'Buddy');
 
-        // Confirm adoption
         const confirmButton = getByText('Confirm Adoption (1000 tokens)');
         fireEvent.press(confirmButton);
 
@@ -198,18 +184,15 @@ describe('BuyPetScreen', () => {
     it('shows loading state during adoption', async () => {
         const { getByText, getByPlaceholderText, queryByText } = render(<BuyPetScreen route={mockRoute} />);
 
-        // Select pet and enter name
         const corgiOption = getByText('Corgi').parent;
         fireEvent.press(corgiOption);
 
         const nameInput = getByPlaceholderText('Enter pet name');
         fireEvent.changeText(nameInput, 'Buddy');
 
-        // Start adoption process
         const confirmButton = getByText('Confirm Adoption (1000 tokens)');
         fireEvent.press(confirmButton);
 
-        // Check for loading indicator (you might need to adjust this based on your actual implementation)
         await waitFor(() => {
             expect(queryByText('Confirm Adoption (1000 tokens)')).toBeFalsy();
         });

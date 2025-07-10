@@ -1,4 +1,3 @@
-// __tests__/mocks/MockProviders.js
 import React from 'react';
 
 export const MockPointsProvider = ({ children, points = 100, minusPoint = jest.fn() }) => {

@@ -13,7 +13,7 @@ import { db } from '../firebaseConfig';
 import InAppLayout from "../components/InAppLayout";
 import Corgi from "../components/corgi_walking";
 import Pom from "../components/pom_walking";
-import Pug from "../components/pug_animated";
+import Pug from "../components/pug_walking";
 import NoPetAnimated from "../components/nopet_animated";
 import { FontAwesome5 } from '@expo/vector-icons';
 import Spacer from "../components/Spacer";

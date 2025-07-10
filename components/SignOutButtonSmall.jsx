@@ -6,19 +6,15 @@ import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 
 export const SignOutButtonSmall = () => {
-    // Use `useClerk()` to access the `signOut()` function
     const { signOut } = useClerk()
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const handleSignOut = async () => {
         try {
             await signOut()
-            // Redirect to your desired page
-            // Linking.openURL(Linking.createURL('afterLogout'))
             router.replace('/')
         } catch (err) {
-            // See https://clerk.com/docs/custom-flows/error-handling
-            // for more info on error handling
+            // https://clerk.com/docs/custom-flows/error-handling
             console.error(JSON.stringify(err, null, 2))
         }
     }

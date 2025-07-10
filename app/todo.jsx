@@ -1,4 +1,3 @@
-// App.js
 import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import {
@@ -14,7 +13,6 @@ import {
     FlatList,
     TouchableWithoutFeedback
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,8 +31,6 @@ export default function AppWrapper() {
         </PointsProvider>
     );
 }
-
-// Configure notifications
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
@@ -45,7 +41,6 @@ Notifications.setNotificationHandler({
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// Reminder options in minutes
 const reminderOptions = [
     { label: '10 minutes', value: 10 },
     { label: '30 minutes', value: 30 },
@@ -54,8 +49,6 @@ const reminderOptions = [
     { label: '12 hours', value: 720 },
     { label: '1 day', value: 1440 },
 ];
-
-// Color options for tasks
 const colorOptions = [
     { name: 'Red', value: '#ff6b6b' },
     { name: 'Yellow', value: '#ffd166' },
@@ -65,7 +58,6 @@ const colorOptions = [
     { name: 'Orange', value: '#fb8500' },
 ];
 
-// Request permissions for notifications
 async function registerForPushNotificationsAsync() {
     if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -89,16 +81,11 @@ async function registerForPushNotificationsAsync() {
         return;
     }
 }
-
-// Schedule a notification with custom reminder time
 async function scheduleNotification(task, reminderMinutes) {
     const taskTime = new Date(task.dateTime);
 
-    // Create a notification time based on selected reminder minutes
     const notificationTime = new Date(taskTime);
     notificationTime.setMinutes(notificationTime.getMinutes() - reminderMinutes);
-
-    // Use the task.id as the identifier so we can cancel it later if needed
     await Notifications.scheduleNotificationAsync({
         content: {
             title: 'Task Reminder',
@@ -122,26 +109,23 @@ function App() {
     const [pastTaskNames, setPastTaskNames] = useState([]);
     const [date, setDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [selectedReminderOption, setSelectedReminderOption] = useState(reminderOptions[2]); // Default to 1 hour
+    const [selectedReminderOption, setSelectedReminderOption] = useState(reminderOptions[2]);
     const [showReminderModal, setShowReminderModal] = useState(false);
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
-    const [selectedColor, setSelectedColor] = useState(colorOptions[0]); // Default to Red
+    const [selectedColor, setSelectedColor] = useState(colorOptions[0]);
     const [showColorModal, setShowColorModal] = useState(false);
     const { points, addPoint } = usePoints();
 
-    // Week navigation state
     const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [currentWeekEnd, setCurrentWeekEnd] = useState(endOfWeek(new Date(), { weekStartsOn: 1 }));
 
-    // Load tasks and past task names from storage when the app starts
     useEffect(() => {
         loadTasks();
         loadPastTaskNames();
         registerForPushNotificationsAsync();
     }, []);
 
-    // Update current week dates when week offset changes
     useEffect(() => {
         const newWeekStart = startOfWeek(addWeeks(new Date(), currentWeekOffset), { weekStartsOn: 1 });
         const newWeekEnd = endOfWeek(addWeeks(new Date(), currentWeekOffset), { weekStartsOn: 1 });
@@ -175,7 +159,6 @@ function App() {
         }
     };
 
-    // Save tasks to storage whenever they change
     useEffect(() => {
         const saveTasks = async () => {
             try {
@@ -190,7 +173,6 @@ function App() {
         }
     }, [allTasks]);
 
-    // Save past task names to storage whenever they change
     useEffect(() => {
         const savePastTaskNames = async () => {
             try {
@@ -241,15 +223,9 @@ function App() {
         }
 
         const taskDate = new Date(date);
-
-        // Determine which weekday this task belongs to
         const dayIndex = taskDate.getDay();
-        // Convert from JS day (0=Sunday) to our weekday array (0=Monday)
-        // So Sunday (0) becomes index 6, Monday (1) becomes index 0, etc.
         const weekdayIndex = dayIndex === 0 ? 6 : dayIndex - 1;
         const weekday = weekdays[weekdayIndex];
-
-        // Get the week key for the task date
         const taskWeekStart = format(startOfWeek(taskDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
         const newTask = {
@@ -263,23 +239,16 @@ function App() {
         };
 
         setAllTasks(prevTasks => {
-            // Create a deep copy of the previous tasks
             const updatedTasks = { ...prevTasks };
-
-            // Initialize the week if it doesn't exist
             if (!updatedTasks[taskWeekStart]) {
                 updatedTasks[taskWeekStart] = {};
                 weekdays.forEach(day => {
                     updatedTasks[taskWeekStart][day] = [];
                 });
             }
-
-            // Initialize the weekday if it doesn't exist
             if (!updatedTasks[taskWeekStart][weekday]) {
                 updatedTasks[taskWeekStart][weekday] = [];
             }
-
-            // Add the task to the appropriate week and weekday
             updatedTasks[taskWeekStart][weekday] = [
                 ...updatedTasks[taskWeekStart][weekday],
                 newTask
@@ -288,18 +257,15 @@ function App() {
             return updatedTasks;
         });
 
-        // Schedule a notification for this task with selected reminder time
         scheduleNotification(newTask, selectedReminderOption.value);
 
-        // Add to past task names if not already there
         if (!pastTaskNames.includes(taskName)) {
             setPastTaskNames(prev => [...prev, taskName]);
         }
 
-        // Reset input fields
         setTaskName('');
         setDate(new Date());
-        setShowAddTaskForm(false); // Hide form after adding task
+        setShowAddTaskForm(false);
     };
 
     const toggleTaskCompletion = (weekKey, weekday, taskId) => {
@@ -311,7 +277,6 @@ function App() {
                     if (task.id === taskId) {
                         const isBeingCompleted = !task.completed;
 
-                        // Only add point if completing (not uncompleting) and not already awarded
                         if (isBeingCompleted && !task.pointAwarded) {
                             addPoint();
                         }
@@ -331,12 +296,9 @@ function App() {
     };
 
     const deleteTask = (weekKey, weekday, taskId) => {
-        // Cancel the notification for this task
         Notifications.cancelScheduledNotificationAsync(taskId).catch(error => {
             console.log('Error cancelling notification:', error);
         });
-
-        // Remove the task from state
         setAllTasks(prevTasks => {
             const updatedTasks = { ...prevTasks };
 
@@ -358,11 +320,9 @@ function App() {
 
         const currentDate = selectedDate || date;
         if (Platform.OS === 'android') {
-            // Only hide the picker on Android since it closes automatically
             setShowDatePicker(false);
             setDate(currentDate);
         } else {
-            // On iOS, don't hide the picker automatically, just update the date
             setDate(currentDate);
         }
     };
@@ -375,10 +335,8 @@ function App() {
         setShowColorModal(false);
     };
 
-    // Get the current week's key
     const currentWeekKey = format(currentWeekStart, 'yyyy-MM-dd');
 
-    // Get tasks for the current week
     const currentWeekTasks = allTasks[currentWeekKey] || {};
 
     return (
@@ -394,7 +352,6 @@ function App() {
                         <Text style={styles.pointsText}> {points}</Text>
                     </View>
                     <Spacer height={10}/>
-                    {/* Week Navigation */}
                     <View style={styles.weekNavigationContainer}>
                         <Text style={styles.weekDateRange}>
                             {format(currentWeekStart, 'MMM d')} - {format(currentWeekEnd, 'MMM d, yyyy')}
@@ -424,7 +381,6 @@ function App() {
                                 <Text style={styles.weekNavButtonText}>▶</Text>
                             </TouchableOpacity>
                         </View>
-                        {/* Add Task Button */}
                         {!showAddTaskForm && (
                             <TouchableOpacity
                                 style={styles.addTaskButton}
@@ -435,11 +391,6 @@ function App() {
                         )}
                     </View>
 
-
-
-
-
-                    {/* Add Task Form */}
                     {showAddTaskForm && (
                         <View style={styles.addTaskContainer}>
                             <View style={styles.addTaskHeaderContainer}>
@@ -549,8 +500,6 @@ function App() {
                             </TouchableOpacity>
                         </View>
                     )}
-
-                    {/* Tasks List Section */}
                     <ScrollView
                         style={styles.weekdaysContainer}
                     >
@@ -635,7 +584,6 @@ function App() {
                         ))}
                     </ScrollView>
 
-                    {/* Reminder Options Modal */}
                     <Modal
                         animationType="slide"
                         transparent={true}
@@ -681,7 +629,6 @@ function App() {
                         </TouchableWithoutFeedback>
                     </Modal>
 
-                    {/* Color Selection Modal */}
                     <Modal
                         animationType="fade"
                         transparent={true}
@@ -775,38 +722,11 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#343a40',
     },
-    // Week navigation styles
-    weekNavigationContainer: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
     weekNavigationHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 8,
-    },
-    weekNavButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-    },
-    weekNavButtonText: {
-        color: '#e19a50',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    weekDateRange: {
-        textAlign: 'center',
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#343a40',
     },
     addTaskButton: {
         backgroundColor: '#e19a50',
